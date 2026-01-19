@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Regulation } from '@/types';
-import { getRegulationById } from '@/lib/mockData';
 import { downloadRegulationPDF } from '@/lib/pdfGenerator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, Calendar, Tag } from 'lucide-react';
 import { format } from 'date-fns';
+import { normalizeRegulation } from '@/lib/utils';
 
 export default function RegulationDetailPage() {
   const params = useParams<{ id: string }>();
@@ -18,10 +18,22 @@ export default function RegulationDetailPage() {
 
   useEffect(() => {
     if (params?.id) {
-      const reg = getRegulationById(params.id);
-      if (reg && reg.state === 'PUBLISHED') {
-        setRegulation(reg);
-      }
+      const fetchData = async () => {
+        const response = await fetch(`/api/regulations/${params.id}`);
+        if (!response.ok) {
+          setRegulation(null);
+          return;
+        }
+        const json = await response.json();
+        const normalized = normalizeRegulation(json.data);
+        if (normalized.state === 'PUBLISHED') {
+          setRegulation(normalized);
+        } else {
+          setRegulation(null);
+        }
+      };
+
+      fetchData();
     }
   }, [params?.id]);
 
@@ -53,9 +65,34 @@ export default function RegulationDetailPage() {
         return 'Resolución';
       case 'ORDINANCE':
         return 'Ordenanza';
+      case 'TRIBUNAL_RESOLUTION':
+        return 'Resolución Tribunal';
+      case 'BID':
+        return 'Licitación';
       default:
         return type;
     }
+  };
+
+  const getLegalStatusLabel = (status?: string) => {
+    switch (status) {
+      case 'VIGENTE':
+        return 'Vigente';
+      case 'PARCIAL':
+        return 'Parcialmente vigente';
+      case 'SIN_ESTADO':
+      default:
+        return 'Sin estado';
+    }
+  };
+
+  const handleDownload = () => {
+    const storedUrl = regulation.fileUrl || regulation.pdfUrl;
+    if (storedUrl) {
+      window.open(storedUrl, '_blank', 'noopener');
+      return;
+    }
+    downloadRegulationPDF(regulation);
   };
 
   return (
@@ -79,7 +116,7 @@ export default function RegulationDetailPage() {
                 {regulation.reference}
               </CardDescription>
             </div>
-            <Button onClick={() => downloadRegulationPDF(regulation)}>
+            <Button onClick={handleDownload}>
               <Download className="h-4 w-4 mr-2" />
               Descargar PDF
             </Button>
@@ -103,6 +140,23 @@ export default function RegulationDetailPage() {
                 ))}
               </div>
             </div>
+            <div>
+              <p className="text-sm text-gray-600">Estado Legal:</p>
+              <p className="font-medium">{getLegalStatusLabel(regulation.legalStatus)}</p>
+            </div>
+            {(regulation.fileUrl || regulation.pdfUrl) && (
+              <div className="md:col-span-2">
+                <p className="text-sm text-gray-600">Documento Original:</p>
+                <a
+                  className="text-blue-600 underline"
+                  href={regulation.fileUrl || regulation.pdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Ver PDF
+                </a>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

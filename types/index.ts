@@ -1,6 +1,13 @@
-export type RegulationType = 'DECREE' | 'RESOLUTION' | 'ORDINANCE';
+export type RegulationType =
+  | 'DECREE'
+  | 'RESOLUTION'
+  | 'ORDINANCE'
+  | 'TRIBUNAL_RESOLUTION'
+  | 'BID';
 
 export type WorkflowState = 'DRAFT' | 'REVIEW' | 'APPROVED' | 'PUBLISHED' | 'ARCHIVED';
+
+export type LegalStatus = 'VIGENTE' | 'PARCIAL' | 'SIN_ESTADO';
 
 export interface Regulation {
   id: string;
@@ -13,6 +20,7 @@ export interface Regulation {
   pdfUrl?: string;
   fileUrl?: string;
   state: WorkflowState;
+  legalStatus?: LegalStatus;
   stateHistory: StateTransition[];
   createdAt: Date;
   updatedAt: Date;
@@ -41,4 +49,23 @@ export interface User {
   name: string;
   email: string;
   role: 'ADMIN' | 'REVIEWER' | 'DIRECTOR' | 'VIEWER';
+}
+
+export interface BulletinDocument {
+  id: string;
+  // Removed municipality, department, location - now omitted from metadata
+  issueDate: Date;
+  regulationType: RegulationType;
+  documentNumber: string;
+  reference: string;
+  title: string;
+  subject: string;
+  openingDetails: string;
+  infoDetails: string;
+  extraNotes?: string;
+  signerName: string;
+  signerRole: string;
+  footerNote?: string;
+  state: WorkflowState;
+  stateHistory?: StateTransition[];
 }

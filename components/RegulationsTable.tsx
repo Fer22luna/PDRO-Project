@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Download } from 'lucide-react';
+import { Eye, Download, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -34,6 +34,10 @@ export default function RegulationsTable({
         return 'Resolución';
       case 'ORDINANCE':
         return 'Ordenanza';
+      case 'TRIBUNAL_RESOLUTION':
+        return 'Resolución Tribunal';
+      case 'BID':
+        return 'Licitación';
     }
   };
 
@@ -45,6 +49,10 @@ export default function RegulationsTable({
         return 'secondary' as const;
       case 'ORDINANCE':
         return 'outline' as const;
+      case 'TRIBUNAL_RESOLUTION':
+        return 'secondary' as const;
+      case 'BID':
+        return 'default' as const;
     }
   };
 
@@ -82,6 +90,32 @@ export default function RegulationsTable({
     }
   };
 
+  const getLegalStatusLabel = (status: string) => {
+    switch (status) {
+      case 'VIGENTE':
+        return 'Vigente';
+      case 'PARCIAL':
+        return 'Parcialmente vigente';
+      case 'SIN_ESTADO':
+        return 'Sin estado';
+      default:
+        return status;
+    }
+  };
+
+  const getLegalStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'VIGENTE':
+        return 'default' as const;
+      case 'PARCIAL':
+        return 'secondary' as const;
+      case 'SIN_ESTADO':
+        return 'outline' as const;
+      default:
+        return 'outline' as const;
+    }
+  };
+
   if (regulations.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -100,6 +134,7 @@ export default function RegulationsTable({
               <TableHead>Fecha Publicación</TableHead>
               <TableHead>Número Especial</TableHead>
               <TableHead>Referencia</TableHead>
+              <TableHead>Estado Legal</TableHead>
               <TableHead>Tipo</TableHead>
               {showState && <TableHead>Estado</TableHead>}
               <TableHead className="text-right">Acciones</TableHead>
@@ -115,6 +150,11 @@ export default function RegulationsTable({
                   {regulation.specialNumber}
                 </TableCell>
                 <TableCell>{regulation.reference}</TableCell>
+                <TableCell>
+                  <Badge variant={getLegalStatusBadgeVariant(regulation.legalStatus ?? 'SIN_ESTADO')}>
+                    {getLegalStatusLabel(regulation.legalStatus ?? 'SIN_ESTADO')}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   <Badge variant={getTypeBadgeVariant(regulation.type)}>
                     {getTypeLabel(regulation.type)}
@@ -134,6 +174,14 @@ export default function RegulationsTable({
                       Ver
                     </Button>
                   </Link>
+                  {showState && (
+                    <Link href={`/admin/regulations/${regulation.id}`}>
+                      <Button size="sm" variant="outline">
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                    </Link>
+                  )}
                   {onDownloadPDF && (
                     <Button
                       size="sm"
@@ -172,16 +220,27 @@ export default function RegulationsTable({
               {regulation.specialNumber}
             </h3>
             <p className="text-sm text-gray-600 mb-2">{regulation.reference}</p>
+            <div className="mb-2">
+              <Badge variant={getLegalStatusBadgeVariant(regulation.legalStatus ?? 'SIN_ESTADO')}>{getLegalStatusLabel(regulation.legalStatus ?? 'SIN_ESTADO')}</Badge>
+            </div>
             <p className="text-xs text-gray-500 mb-3">
               {format(regulation.publicationDate, 'dd/MM/yyyy')}
             </p>
             <div className="flex space-x-2">
-              <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`} className="flex-1">
-                <Button size="sm" variant="outline" className="w-full">
-                  <Eye className="h-4 w-4 mr-1" />
-                  Ver
-                </Button>
-              </Link>
+                <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`} className="flex-1">
+                  <Button size="sm" variant="outline" className="w-full">
+                    <Eye className="h-4 w-4 mr-1" />
+                    Ver
+                  </Button>
+                </Link>
+                {showState && (
+                  <Link href={`/admin/regulations/${regulation.id}`} className="flex-1">
+                    <Button size="sm" variant="outline" className="w-full">
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+                  </Link>
+                )}
               {onDownloadPDF && (
                 <Button
                   size="sm"

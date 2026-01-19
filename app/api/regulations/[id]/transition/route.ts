@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRegulationById } from '@/lib/mockData';
+import {
+  addTransitionInDb,
+  allowedTransitions,
+  fetchRegulationByIdFromDb,
+} from '@/lib/regulationService';
 import { WorkflowState } from '@/types';
 
-const ALLOWED_TRANSITIONS: Record<WorkflowState, WorkflowState[]> = {
-  DRAFT: ['REVIEW'],
-  REVIEW: ['APPROVED', 'DRAFT'],
-  APPROVED: ['PUBLISHED', 'REVIEW'],
-  PUBLISHED: ['ARCHIVED'],
-  ARCHIVED: [],
-};
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, context: any) {
   try {
-    const { id } = await params;
+    const { params } = context ?? {};
+    const { id } = (await params) ?? {};
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json(
+        { success: false, message: 'Missing or invalid id parameter' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { toState, notes } = body;
 
-    const regulation = getRegulationById(id);
+    const regulation = await fetchRegulationByIdFromDb(id);
 
     if (!regulation) {
       return NextResponse.json(
@@ -32,8 +33,8 @@ export async function POST(
     }
 
     // Validate transition
-    const allowedTransitions = ALLOWED_TRANSITIONS[regulation.state];
-    if (!allowedTransitions.includes(toState)) {
+    const allowed = allowedTransitions(regulation.state);
+    if (!allowed.includes(toState)) {
       return NextResponse.json(
         {
           success: false,
@@ -43,22 +44,7 @@ export async function POST(
       );
     }
 
-    // In a real app, this would update the regulation state in the database
-    const newTransition = {
-      fromState: regulation.state,
-      toState,
-      timestamp: new Date(),
-      userId: 'current-user',
-      userRole: 'ADMIN',
-      notes,
-    };
-
-    const updatedRegulation = {
-      ...regulation,
-      state: toState,
-      stateHistory: [...regulation.stateHistory, newTransition],
-      updatedAt: new Date(),
-    };
+    const updatedRegulation = await addTransitionInDb(regulation, toState, notes);
 
     return NextResponse.json({
       success: true,

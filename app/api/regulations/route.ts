@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRegulations } from '@/lib/mockData';
+import {
+  createRegulationInDb,
+  fetchRegulationsFromDb,
+} from '@/lib/regulationService';
 import { RegulationType, WorkflowState } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -13,36 +16,59 @@ export async function GET(request: NextRequest) {
     dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo')!) : undefined,
   };
 
-  const regulations = getRegulations(filters);
+  try {
+    const regulations = await fetchRegulationsFromDb(filters);
 
-  return NextResponse.json({
-    success: true,
-    data: regulations,
-    count: regulations.length,
-  });
+    return NextResponse.json({
+      success: true,
+      data: regulations,
+      count: regulations.length,
+    });
+  } catch (error) {
+    // Log full error server-side for debugging
+    console.error('Error in GET /api/regulations', error);
+
+    const safeMessage = error instanceof Error ? error.message : 'Unknown error';
+    // Attempt to parse serialized Supabase error
+    let parsed: any = safeMessage;
+    try {
+      parsed = JSON.parse(safeMessage);
+    } catch (e) {
+      // not JSON, keep raw
+    }
+
+    // If Supabase reports an invalid API key, return a clearer 401 with guidance
+    const messageText = typeof parsed === 'string' ? parsed : parsed?.message ?? String(parsed);
+    if (typeof messageText === 'string' && messageText.includes('Invalid API key')) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid Supabase API key',
+          error: {
+            detail: 'Verifica que las variables de entorno SUPABASE_SERVICE_ROLE_KEY (server) y NEXT_PUBLIC_SUPABASE_ANON_KEY (cliente) estén definidas y sean correctas.',
+            raw: parsed,
+          },
+        },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Error fetching regulations',
+        error: parsed,
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    // In a real app, this would create a new regulation in the database
-    const newRegulation = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...body,
-      state: 'DRAFT',
-      stateHistory: [
-        {
-          fromState: null,
-          toState: 'DRAFT',
-          timestamp: new Date(),
-          userId: 'current-user',
-          userRole: 'ADMIN',
-        },
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+
+    const newRegulation = await createRegulationInDb(body);
 
     return NextResponse.json({
       success: true,

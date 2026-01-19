@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRegulationById } from '@/lib/mockData';
+import {
+  fetchRegulationByIdFromDb,
+  updateRegulationInDb,
+} from '@/lib/regulationService';
+import { getSupabaseServerClient } from '@/lib/supabaseClient';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const regulation = getRegulationById(id);
+export async function GET(request: NextRequest, context: any) {
+  // In some Next versions `context.params` can be a Promise. Await safely.
+  const { params } = context ?? {};
+  const { id } = (await params) ?? {};
+  if (!id || typeof id !== 'string') {
+    return NextResponse.json({ success: false, message: 'Missing or invalid id parameter' }, { status: 400 });
+  }
+
+  const regulation = await fetchRegulationByIdFromDb(id);
 
   if (!regulation) {
     return NextResponse.json(
@@ -24,16 +31,17 @@ export async function GET(
   });
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, context: any) {
   try {
-    const { id } = await params;
+    const { params } = context ?? {};
+    const { id } = (await params) ?? {};
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json({ success: false, message: 'Missing or invalid id parameter' }, { status: 400 });
+    }
     const body = await request.json();
-    const regulation = getRegulationById(id);
+    const existing = await fetchRegulationByIdFromDb(id);
 
-    if (!regulation) {
+    if (!existing) {
       return NextResponse.json(
         {
           success: false,
@@ -43,12 +51,7 @@ export async function PUT(
       );
     }
 
-    // In a real app, this would update the regulation in the database
-    const updatedRegulation = {
-      ...regulation,
-      ...body,
-      updatedAt: new Date(),
-    };
+    const updatedRegulation = await updateRegulationInDb(id, body);
 
     return NextResponse.json({
       success: true,
@@ -67,12 +70,15 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const regulation = getRegulationById(id);
+export async function DELETE(request: NextRequest, context: any) {
+  const { params } = context ?? {};
+  const { id } = (await params) ?? {};
+  if (!id || typeof id !== 'string') {
+    return NextResponse.json({ success: false, message: 'Missing or invalid id parameter' }, { status: 400 });
+  }
+  const supabase = getSupabaseServerClient();
+
+  const regulation = await fetchRegulationByIdFromDb(id);
 
   if (!regulation) {
     return NextResponse.json(
@@ -84,7 +90,19 @@ export async function DELETE(
     );
   }
 
-  // In a real app, this would delete the regulation from the database
+  const { error } = await supabase.from('regulations').delete().eq('id', id);
+
+  if (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Error deleting regulation',
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json({
     success: true,
     message: 'Regulation deleted successfully',

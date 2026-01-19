@@ -9,14 +9,18 @@ import { Button } from '@/components/ui/button';
 export default function NewRegulationPage() {
   const router = useRouter();
 
-  const handleSave = (regulation: Partial<Regulation>) => {
-    // In a real app, this would make an API call
-    console.log('Creating new regulation:', regulation);
-    
-    // Show success message (in a real app, use a toast notification)
+  const handleSave = async (regulation: Partial<Regulation>) => {
+    const response = await fetch('/api/regulations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(regulation),
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al crear la normativa');
+    }
+
     alert('Normativa creada exitosamente como borrador');
-    
-    // Redirect to admin page
     router.push('/admin');
   };
 

@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface RegulationFormProps {
   regulation?: Regulation;
-  onSave: (regulation: Partial<Regulation>) => void;
+  onSave: (regulation: Partial<Regulation>) => Promise<void> | void;
   onCancel: () => void;
 }
 
@@ -24,23 +24,56 @@ export default function RegulationForm({ regulation, onSave, onCancel }: Regulat
       : '',
     reference: regulation?.reference || '',
     content: regulation?.content || '',
-    keywords: regulation?.keywords.join(', ') || '',
+    keywords: regulation?.keywords?.join(', ') || '',
+    legalStatus: regulation?.legalStatus || 'SIN_ESTADO',
   });
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const uploadFileIfNeeded = async (): Promise<string | undefined> => {
+    if (!pdfFile) return regulation?.fileUrl || regulation?.pdfUrl;
+
+    const payload = new FormData();
+    payload.append('file', pdfFile);
+
+    const response = await fetch('/api/uploads/regulation-file', {
+      method: 'POST',
+      body: payload,
+    });
+
+    if (!response.ok) {
+      throw new Error('No se pudo subir el PDF. Intenta nuevamente.');
+    }
+
+    const json = await response.json();
+    return json.url as string;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const regulationData: Partial<Regulation> = {
-      ...regulation,
-      type: formData.type,
-      specialNumber: formData.specialNumber,
-      publicationDate: new Date(formData.publicationDate),
-      reference: formData.reference,
-      content: formData.content,
-      keywords: formData.keywords.split(',').map(k => k.trim()).filter(k => k),
-    };
+    setIsSubmitting(true);
 
-    onSave(regulationData);
+    try {
+      const uploadedUrl = await uploadFileIfNeeded();
+      const regulationData: Partial<Regulation> = {
+        ...regulation,
+        type: formData.type,
+        specialNumber: formData.specialNumber,
+        publicationDate: new Date(formData.publicationDate),
+        reference: formData.reference,
+        content: formData.content,
+        keywords: formData.keywords.split(',').map(k => k.trim()).filter(k => k),
+        legalStatus: formData.legalStatus as any,
+        fileUrl: uploadedUrl,
+        pdfUrl: uploadedUrl,
+      };
+
+      await onSave(regulationData);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al guardar la normativa');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
@@ -72,6 +105,8 @@ export default function RegulationForm({ regulation, onSave, onCancel }: Regulat
               <option value="DECREE">Decreto</option>
               <option value="RESOLUTION">Resolución</option>
               <option value="ORDINANCE">Ordenanza</option>
+              <option value="TRIBUNAL_RESOLUTION">Resolución Tribunal</option>
+              <option value="BID">Licitación</option>
             </Select>
           </div>
 
@@ -151,6 +186,34 @@ export default function RegulationForm({ regulation, onSave, onCancel }: Regulat
           </div>
 
           {/* Current State Badge */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Estado Legal</label>
+            <Select value={formData.legalStatus} onChange={(e) => handleChange('legalStatus', e.target.value)}>
+              <option value="SIN_ESTADO">Sin estado</option>
+              <option value="VIGENTE">Vigente</option>
+              <option value="PARCIAL">Parcialmente vigente</option>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              PDF firmado
+            </label>
+            <Input
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Sube el PDF oficial firmado. Se almacenará en Supabase Storage y se mostrará en la vista pública.
+            </p>
+            {regulation?.fileUrl && (
+              <p className="text-xs text-gray-600 mt-2">
+                Archivo actual: <a className="underline" href={regulation.fileUrl} target="_blank" rel="noreferrer">Ver PDF</a>
+              </p>
+            )}
+          </div>
+
           {regulation && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -162,10 +225,10 @@ export default function RegulationForm({ regulation, onSave, onCancel }: Regulat
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button type="submit" className="flex-1">
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
               {regulation ? 'Guardar Cambios' : 'Crear Normativa'}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1" disabled={isSubmitting}>
               Cancelar
             </Button>
           </div>

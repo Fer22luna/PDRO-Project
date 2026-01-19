@@ -23,6 +23,7 @@ Los recursos serán distribuidos según el siguiente detalle:
 La ejecución presupuestaria será supervisada por la Dirección de Finanzas.`,
     keywords: ['presupuesto', 'finanzas', '2024', 'recursos'],
     state: 'PUBLISHED',
+    legalStatus: 'VIGENTE',
     stateHistory: [
       {
         fromState: null,
@@ -76,6 +77,7 @@ Autorizar la contratación de 10 nuevos funcionarios para las áreas de:
 Los procesos de selección se realizarán conforme a las normativas vigentes.`,
     keywords: ['personal', 'contratación', 'recursos humanos'],
     state: 'PUBLISHED',
+    legalStatus: 'VIGENTE',
     stateHistory: [
       {
         fromState: null,
@@ -130,6 +132,7 @@ Todos los ciudadanos deberán:
 El incumplimiento será sancionado según lo establecido en el reglamento.`,
     keywords: ['medio ambiente', 'residuos', 'gestión municipal', 'ordenanza'],
     state: 'PUBLISHED',
+    legalStatus: 'PARCIAL',
     stateHistory: [
       {
         fromState: null,
@@ -184,6 +187,7 @@ Se destinarán recursos para:
 El plazo de implementación será de 12 meses a partir de la fecha de publicación.`,
     keywords: ['tecnología', 'modernización', 'infraestructura', 'sistemas'],
     state: 'APPROVED',
+    legalStatus: 'SIN_ESTADO',
     stateHistory: [
       {
         fromState: null,
@@ -229,6 +233,7 @@ Establecer los siguientes horarios de atención al público:
 Los días festivos y feriados nacionales no habrá atención al público.`,
     keywords: ['horarios', 'atención', 'servicios'],
     state: 'REVIEW',
+    legalStatus: 'SIN_ESTADO',
     stateHistory: [
       {
         fromState: null,

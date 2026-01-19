@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Regulation, RegulationType, WorkflowState } from '@/types';
-import { getRegulations } from '@/lib/mockData';
 import { downloadRegulationPDF } from '@/lib/pdfGenerator';
 import FilterBar from '@/components/FilterBar';
 import RegulationsTable from '@/components/RegulationsTable';
@@ -10,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Plus, FileText, CheckCircle, Clock, Archive } from 'lucide-react';
 import Link from 'next/link';
+import { normalizeRegulations } from '@/lib/utils';
 
 export default function AdminPage() {
   const [regulations, setRegulations] = useState<Regulation[]>([]);
@@ -22,15 +22,33 @@ export default function AdminPage() {
   }>({});
 
   useEffect(() => {
-    const allRegulations = getRegulations({
-      ...filters,
-      dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
-      dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
-    });
-    setRegulations(allRegulations);
+    const fetchData = async () => {
+      const params = new URLSearchParams();
+      if (filters.type) params.set('type', filters.type);
+      if (filters.state) params.set('state', filters.state);
+      if (filters.searchText) params.set('search', filters.searchText);
+      if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+      if (filters.dateTo) params.set('dateTo', filters.dateTo);
+
+      const response = await fetch(`/api/regulations?${params.toString()}`);
+      if (!response.ok) {
+        setRegulations([]);
+        return;
+      }
+
+      const json = await response.json();
+      setRegulations(normalizeRegulations(json.data));
+    };
+
+    fetchData();
   }, [filters]);
 
   const handleDownloadPDF = (regulation: Regulation) => {
+    const storedUrl = regulation.fileUrl || regulation.pdfUrl;
+    if (storedUrl) {
+      window.open(storedUrl, '_blank', 'noopener');
+      return;
+    }
     downloadRegulationPDF(regulation);
   };
 
@@ -54,12 +72,20 @@ export default function AdminPage() {
               Gestiona decretos, resoluciones y ordenanzas
             </p>
           </div>
-          <Link href="/admin/regulations/new">
-            <Button size="lg">
-              <Plus className="h-5 w-5 mr-2" />
-              Nueva Normativa
-            </Button>
-          </Link>
+          <div className="flex flex-col md:flex-row gap-2">
+            <Link href="/admin/editor">
+              <Button size="lg" variant="secondary">
+                <FileText className="h-5 w-5 mr-2" />
+                Editor de Boletín
+              </Button>
+            </Link>
+            <Link href="/admin/regulations/new">
+              <Button size="lg">
+                <Plus className="h-5 w-5 mr-2" />
+                Nueva Normativa
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

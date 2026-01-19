@@ -45,6 +45,7 @@ Sistema web de gestión y publicación de normativas institucionales desarrollad
 - **Generación PDF:** jsPDF + jspdf-autotable
 - **Iconos:** lucide-react
 - **Utilidades:** date-fns, clsx, tailwind-merge
+- **Base de datos:** Supabase (PostgreSQL gestionado)
 
 ## 📁 Estructura del Proyecto
 
@@ -102,12 +103,25 @@ cd PDRO-Project
 npm install
 ```
 
-3. Ejecutar en desarrollo:
+3. Configurar variables de entorno (Supabase):
+  - Copia `.env.example` a `.env.local` y completa:
+    - `NEXT_PUBLIC_SUPABASE_URL`
+    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+    - `SUPABASE_SERVICE_ROLE_KEY` (solo en servidor para APIs)
+
+4. Ejecutar migraciones en Supabase:
+  - Importa los scripts SQL en orden:
+    1. `scripts/20260116_1200_create_regulations_tables.sql`
+    2. `scripts/20260116_1300_create_regulation_types_table.sql`
+    3. `scripts/20260116_1325_add_legal_status.sql`
+    4. Si es necesario eliminar columnas antiguas: `scripts/20260116_1315_drop_bulletin_location_columns.sql`
+
+5. Ejecutar en desarrollo:
 ```bash
 npm run dev
 ```
 
-4. Abrir el navegador en [http://localhost:3000](http://localhost:3000)
+6. Abrir el navegador en [http://localhost:3000](http://localhost:3000)
 
 ### Comandos Disponibles
 
@@ -124,18 +138,25 @@ npm run lint     # Linter ESLint
 ```typescript
 {
   id: string
-  type: 'DECREE' | 'RESOLUTION' | 'ORDINANCE'
+  type: 'DECREE' | 'RESOLUTION' | 'ORDINANCE' | 'TRIBUNAL_RESOLUTION' | 'BID'
   specialNumber: string
   publicationDate: Date
   reference: string
   content: string (Markdown)
   keywords: string[]
   state: 'DRAFT' | 'REVIEW' | 'APPROVED' | 'PUBLISHED' | 'ARCHIVED'
+  legalStatus?: 'VIGENTE' | 'PARCIAL' | 'SIN_ESTADO'
   stateHistory: StateTransition[]
   createdAt: Date
   updatedAt: Date
 }
 ```
+
+### Estados Legales
+- Se agregaron nuevos estados legales para las normativas:
+  - `VIGENTE` (Vigente)
+  - `PARCIAL` (Parcialmente vigente)
+  - `SIN_ESTADO` (Sin estado - valor por defecto)
 
 ### Workflow de Estados
 - **DRAFT** → REVIEW
@@ -207,4 +228,4 @@ Proyecto desarrollado para la gestión de normativas institucionales.
 
 ---
 
-**Nota:** Este proyecto utiliza datos mock para demostración. Para ambiente de producción, se debe integrar con una base de datos real y sistema de autenticación.
+**Nota:** La aplicación ahora espera datos desde Supabase. Si no hay registros, las vistas mostrarán tablas vacías hasta que cargues datos reales.
