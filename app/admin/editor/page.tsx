@@ -37,6 +37,11 @@ const initialDraft: BulletinDocument = {
   documentNumber: 'IF-2026-00008553-PER-DIRC#SHF',
   reference: 'LICITACION PUBLICA N°32/2025 - EXP D 930/2025',
   title: 'LLAMADO A LICITACIÓN PÚBLICA N° 32 / 2025',
+  subject: 'Llamado a licitación pública',
+  openingDetails: 'Apertura prevista para 20/02/2026 a las 10:00 hs en mesa de entradas.',
+  infoDetails: 'Contratación de servicios conforme pliego oficial. Presentar sobres cerrados.',
+  signerName: 'Secretaría de Hacienda y Finanzas',
+  signerRole: 'Autoridad emisora',
   state: 'DRAFT',
   stateHistory: [
     {
