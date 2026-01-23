@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Search, Filter } from 'lucide-react';
+import { normalizeRegulations } from '@/lib/utils';
 
 type PublicFilters = {
   type?: RegulationType;
@@ -52,21 +53,7 @@ export default function Home() {
 
         const json = await response.json();
         const regs = json?.data ?? [];
-        // normalize dates and shapes
-        const normalized: Regulation[] = regs.map((r: any) => ({
-          ...r,
-          publicationDate: new Date(r.publicationDate ?? r.publication_date),
-          createdAt: new Date(r.createdAt ?? r.created_at),
-          updatedAt: new Date(r.updatedAt ?? r.updated_at),
-          stateHistory: (r.stateHistory || r.regulation_state_transitions || []).map((t: any) => ({
-            fromState: t.fromState ?? t.from_state ?? null,
-            toState: t.toState ?? t.to_state,
-            timestamp: new Date(t.timestamp),
-            userId: t.userId ?? t.user_id ?? 'unknown',
-            userRole: t.userRole ?? t.user_role ?? 'UNKNOWN',
-            notes: t.notes ?? undefined,
-          })),
-        }));
+        const normalized: Regulation[] = normalizeRegulations(regs);
 
         const filtered = normalized.filter((reg) => {
           const matchesYear = filters.year ? reg.publicationDate.getFullYear() === Number(filters.year) : true;
@@ -151,7 +138,7 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-4 text-gray-700">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Texto libre</label>
+                <label className="text-sm font-medium text-gray-700">Filtro</label>
                 <div className="relative">
                   <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <Input

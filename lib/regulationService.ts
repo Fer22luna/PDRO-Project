@@ -91,7 +91,10 @@ export async function fetchRegulationsFromDb(filter?: {
 
   if (filter?.searchText) {
     const like = `%${filter.searchText}%`;
-    query = query.or(`reference.ilike.${like},content.ilike.${like}`);
+    const contains = `{${filter.searchText}}`;
+    query = query.or(
+      `reference.ilike.${like},content.ilike.${like},keywords.cs.${contains}`
+    );
   }
 
   if (filter?.dateFrom) {

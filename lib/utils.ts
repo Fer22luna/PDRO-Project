@@ -11,6 +11,35 @@ function parseDate(value: string | Date | null | undefined): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
+function parseKeywords(raw: any): string[] {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((k) => (typeof k === 'string' ? k : String(k ?? '')))
+      .map((k) => k.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((k) => (typeof k === 'string' ? k : String(k ?? '')))
+          .map((k) => k.trim())
+          .filter(Boolean);
+      }
+    } catch (_) {
+      // not JSON, treat as CSV
+    }
+    return raw
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 export function normalizeRegulation(raw: any): Regulation {
   const history: StateTransition[] = (raw.stateHistory || raw.regulation_state_transitions || []).map((item: any) => ({
     fromState: item.fromState ?? item.from_state ?? null,
@@ -28,7 +57,7 @@ export function normalizeRegulation(raw: any): Regulation {
     publicationDate: parseDate(raw.publicationDate ?? raw.publication_date),
     reference: raw.reference,
     content: raw.content,
-    keywords: raw.keywords ?? [],
+    keywords: parseKeywords(raw.keywords),
     state: raw.state,
     legalStatus: raw.legalStatus ?? raw.legal_status ?? 'SIN_ESTADO',
     stateHistory: history,
