@@ -73,14 +73,19 @@ export default function AdminPage() {
             </p>
           </div>
           <div className="flex flex-col md:flex-row gap-2">
-            <Link href="/admin/editor">
+            {/* <Link href="/admin/editor">
               <Button size="lg" variant="secondary">
                 <FileText className="h-5 w-5 mr-2" />
                 Editor de Boletín
               </Button>
-            </Link>
+            </Link> */}
             <Link href="/admin/regulations/new">
-              <Button size="lg">
+              <Button size="lg"  style={{
+                background: "rgba(255, 255, 255, 0.1)",  // Fondo blanco semi-transparente
+                color: "#6366F1",
+                border: "2px solid #6366F1",
+                backdropFilter: "blur(10px)"
+              }}>
                 <Plus className="h-5 w-5 mr-2" />
                 Nueva Normativa
               </Button>
@@ -144,26 +149,26 @@ export default function AdminPage() {
         </Card>
       </div>
 
-      <Card className="mb-6">
+      <Card className="mb-6 shadow-xl border border-gray-100 bg-white/95 backdrop-blur-sm rounded-2xl">
         <CardHeader>
           <CardTitle>Búsqueda y Filtros</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600">
             Filtra las normativas por tipo, estado, fecha o palabras clave
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="text-gray-700">
           <FilterBar onFilterChange={setFilters} showStateFilter={true} />
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="shadow-xl border border-gray-100 bg-white/95 backdrop-blur-sm rounded-2xl">
         <CardHeader>
           <CardTitle>Todas las Normativas</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600">
             {regulations.length} normativa(s) encontrada(s)
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="text-gray-700">
           <RegulationsTable
             regulations={regulations}
             showState={true}

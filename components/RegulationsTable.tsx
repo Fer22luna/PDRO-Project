@@ -127,17 +127,17 @@ export default function RegulationsTable({
   return (
     <>
       {/* Desktop Table */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-100 shadow-lg bg-white/95">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fecha Publicación</TableHead>
-              <TableHead>Número Especial</TableHead>
-              <TableHead>Referencia</TableHead>
-              <TableHead>Estado Legal</TableHead>
-              <TableHead>Tipo</TableHead>
-              {showState && <TableHead>Estado</TableHead>}
-              <TableHead className="text-right">Acciones</TableHead>
+              <TableHead className="text-gray-700">Fecha Publicación</TableHead>
+              <TableHead className="text-gray-700">Número Especial</TableHead>
+              <TableHead className="text-gray-700">Referencia</TableHead>
+              <TableHead className="text-gray-700">Estado Legal</TableHead>
+              <TableHead className="text-gray-700">Tipo</TableHead>
+              {showState && <TableHead className="text-gray-700">Estado</TableHead>}
+              <TableHead className="text-right text-gray-700">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -204,29 +204,31 @@ export default function RegulationsTable({
         {regulations.map((regulation) => (
           <div
             key={regulation.id}
-            className="border rounded-lg p-4 bg-white shadow-sm"
+            className="rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden"
           >
-            <div className="flex justify-between items-start mb-2">
+            <div className="bg-gradient-to-r from-blue-50 to-white px-4 py-2 flex items-center justify-between">
               <Badge variant={getTypeBadgeVariant(regulation.type)}>
                 {getTypeLabel(regulation.type)}
               </Badge>
-              {showState && (
-                <Badge variant={getStateBadgeVariant(regulation.state)}>
-                  {getStateLabel(regulation.state)}
+              <p className="text-xs text-gray-600">{format(regulation.publicationDate, 'dd/MM/yyyy')}</p>
+            </div>
+
+            <div className="p-4 space-y-2">
+              <h3 className="font-semibold text-lg">{regulation.specialNumber}</h3>
+              <p className="text-sm text-gray-700">{regulation.reference}</p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={getLegalStatusBadgeVariant(regulation.legalStatus ?? 'SIN_ESTADO')}>
+                  {getLegalStatusLabel(regulation.legalStatus ?? 'SIN_ESTADO')}
                 </Badge>
-              )}
-            </div>
-            <h3 className="font-semibold text-lg mb-1">
-              {regulation.specialNumber}
-            </h3>
-            <p className="text-sm text-gray-600 mb-2">{regulation.reference}</p>
-            <div className="mb-2">
-              <Badge variant={getLegalStatusBadgeVariant(regulation.legalStatus ?? 'SIN_ESTADO')}>{getLegalStatusLabel(regulation.legalStatus ?? 'SIN_ESTADO')}</Badge>
-            </div>
-            <p className="text-xs text-gray-500 mb-3">
-              {format(regulation.publicationDate, 'dd/MM/yyyy')}
-            </p>
-            <div className="flex space-x-2">
+                {showState && (
+                  <Badge variant={getStateBadgeVariant(regulation.state)}>
+                    {getStateLabel(regulation.state)}
+                  </Badge>
+                )}
+              </div>
+              <div className="text-xs text-gray-500">Expediente / Ref: {regulation.reference}</div>
+
+              <div className="flex space-x-2 pt-2">
                 <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`} className="flex-1">
                   <Button size="sm" variant="outline" className="w-full">
                     <Eye className="h-4 w-4 mr-1" />
@@ -241,15 +243,16 @@ export default function RegulationsTable({
                     </Button>
                   </Link>
                 )}
-              {onDownloadPDF && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onDownloadPDF(regulation)}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              )}
+                {onDownloadPDF && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onDownloadPDF(regulation)}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         ))}

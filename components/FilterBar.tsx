@@ -61,7 +61,7 @@ export default function FilterBar({ onFilterChange, showStateFilter = false }: F
                 handleApplyFilters();
               }
             }}
-            className="pl-10"
+            className="pl-10 border-gray-300"
           />
         </div>
         <Button onClick={() => setShowFilters(!showFilters)} variant="outline">

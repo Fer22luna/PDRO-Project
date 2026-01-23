@@ -14,7 +14,7 @@ export default function Header() {
   return (
     <header
       className="border-b sticky top-0 z-50 shadow-sm"
-      style={{ backgroundColor: '#4646FF', color: '#FFFFFF' }}
+       style={{ background: 'linear-gradient(135deg, #0000FF 0%, #4169E1 100%)', color: '#FFFFFF' }}
     >
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
@@ -36,7 +36,7 @@ export default function Header() {
             <Link href="/">
               <Button
                 variant={!isAdminRoute ? 'default' : 'ghost'}
-                style={{ backgroundColor: '#4646FF', color: '#FFFFFF' }}
+                style={{ background: 'transparent', color: '#FFFFFF', border: '2px solid #FFFFFF' }}
               >
                 Portal Público
               </Button>
@@ -44,7 +44,7 @@ export default function Header() {
             <Link href="/admin">
               <Button
                 variant={isAdminRoute ? 'default' : 'ghost'}
-                style={{ backgroundColor: '#4646FF', color: '#FFFFFF' }}
+                style={{ background: 'transparent', color: '#FFFFFF', border: '2px solid #FFFFFF' }}
               >
                 <Settings className="h-4 w-4 mr-2" style={{ color: '#FFFFFF' }} />
                 Administración

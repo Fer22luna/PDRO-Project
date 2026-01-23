@@ -69,7 +69,6 @@ export default function AdminRegulationDetailPage() {
     const json = await response.json();
     setRegulation(normalizeRegulation(json.data));
     setIsEditing(false);
-    router.push('/admin');
   };
 
   const handleCancel = () => {
@@ -112,7 +111,6 @@ export default function AdminRegulationDetailPage() {
 
         const json = await response.json();
         setRegulation(normalizeRegulation(json.data));
-        router.push('/admin');
       };
 
       transition();

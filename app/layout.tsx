@@ -18,7 +18,7 @@ export default function RootLayout({
       <body className="font-sans">
         <div className="flex flex-col min-h-screen">
           <Header />
-          <main className="flex-1">
+          <main className="flex-1"  style={{ backgroundColor: '#F2F2FF' }}>
             {children}
           </main>
           <Footer />

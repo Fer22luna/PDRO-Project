@@ -225,7 +225,7 @@ export default function RegulationForm({ regulation, onSave, onCancel }: Regulat
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+            <Button type="submit" className="flex-1" disabled={isSubmitting}  style={{background: "linear-gradient(135deg, #0000FF 0%, #6366F1 100%)", color: "#FFFFFF", border: "none" }}>
               {regulation ? 'Guardar Cambios' : 'Crear Normativa'}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1" disabled={isSubmitting}>
