@@ -170,44 +170,46 @@ export default function RegulationsTable({
                     </Badge>
                   </TableCell>
                 )}
-                <TableCell className="text-right space-x-2">
-                  {getPdfUrl(regulation) ? (
-                    <a
-                      href={getPdfUrl(regulation) as string}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Button size="sm" variant="outline">
-                        <Eye className="h-4 w-4 mr-1" />
-                        Ver PDF
+                <TableCell className="text-right">
+                  <div className="flex justify-end items-center gap-2 whitespace-nowrap">
+                    {getPdfUrl(regulation) ? (
+                      <a
+                        href={getPdfUrl(regulation) as string}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver PDF
+                        </Button>
+                      </a>
+                    ) : (
+                      <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`}>
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver
+                        </Button>
+                      </Link>
+                    )}
+                    {showState && (
+                      <Link href={`/admin/regulations/${regulation.id}`}>
+                        <Button size="sm" variant="outline">
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      </Link>
+                    )}
+                    {onDownloadPDF && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onDownloadPDF(regulation)}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        PDF
                       </Button>
-                    </a>
-                  ) : (
-                    <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`}>
-                      <Button size="sm" variant="outline">
-                        <Eye className="h-4 w-4 mr-1" />
-                        Ver
-                      </Button>
-                    </Link>
-                  )}
-                  {showState && (
-                    <Link href={`/admin/regulations/${regulation.id}`}>
-                      <Button size="sm" variant="outline">
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
-                    </Link>
-                  )}
-                  {onDownloadPDF && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onDownloadPDF(regulation)}
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      PDF
-                    </Button>
-                  )}
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
