@@ -124,11 +124,14 @@ export default function RegulationsTable({
     );
   }
 
+  const getPdfUrl = (regulation: Regulation) => regulation.fileUrl || regulation.pdfUrl;
+
   return (
     <>
       {/* Desktop Table */}
       <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-100 shadow-lg bg-white/95">
-        <Table>
+        <div className="max-h-96 overflow-y-auto">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="text-gray-700">Fecha Publicación</TableHead>
@@ -168,12 +171,25 @@ export default function RegulationsTable({
                   </TableCell>
                 )}
                 <TableCell className="text-right space-x-2">
-                  <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`}>
-                    <Button size="sm" variant="outline">
-                      <Eye className="h-4 w-4 mr-1" />
-                      Ver
-                    </Button>
-                  </Link>
+                  {getPdfUrl(regulation) ? (
+                    <a
+                      href={getPdfUrl(regulation) as string}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Button size="sm" variant="outline">
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver PDF
+                      </Button>
+                    </a>
+                  ) : (
+                    <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`}>
+                      <Button size="sm" variant="outline">
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver
+                      </Button>
+                    </Link>
+                  )}
                   {showState && (
                     <Link href={`/admin/regulations/${regulation.id}`}>
                       <Button size="sm" variant="outline">
@@ -196,7 +212,8 @@ export default function RegulationsTable({
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
 
       {/* Mobile Cards */}
@@ -229,12 +246,26 @@ export default function RegulationsTable({
               <div className="text-xs text-gray-500">Expediente / Ref: {regulation.reference}</div>
 
               <div className="flex space-x-2 pt-2">
-                <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`} className="flex-1">
-                  <Button size="sm" variant="outline" className="w-full">
-                    <Eye className="h-4 w-4 mr-1" />
-                    Ver
-                  </Button>
-                </Link>
+                {getPdfUrl(regulation) ? (
+                  <a
+                    href={getPdfUrl(regulation) as string}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1"
+                  >
+                    <Button size="sm" variant="outline" className="w-full">
+                      <Eye className="h-4 w-4 mr-1" />
+                      Ver PDF
+                    </Button>
+                  </a>
+                ) : (
+                  <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`} className="flex-1">
+                    <Button size="sm" variant="outline" className="w-full">
+                      <Eye className="h-4 w-4 mr-1" />
+                      Ver
+                    </Button>
+                  </Link>
+                )}
                 {showState && (
                   <Link href={`/admin/regulations/${regulation.id}`} className="flex-1">
                     <Button size="sm" variant="outline" className="w-full">
