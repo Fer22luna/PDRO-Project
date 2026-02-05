@@ -15,6 +15,7 @@ export interface Regulation {
   specialNumber: string;
   publicationDate: Date;
   reference: string;
+  title?: string;
   content: string;
   keywords: string[];
   pdfUrl?: string;

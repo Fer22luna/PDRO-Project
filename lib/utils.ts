@@ -56,6 +56,8 @@ export function normalizeRegulation(raw: any): Regulation {
     specialNumber: raw.specialNumber ?? raw.special_number,
     publicationDate: parseDate(raw.publicationDate ?? raw.publication_date),
     reference: raw.reference,
+    // Map title if present in DB result (some rows may have a title column)
+    title: raw.title ?? raw.header ?? undefined,
     content: raw.content,
     keywords: parseKeywords(raw.keywords),
     state: raw.state,
