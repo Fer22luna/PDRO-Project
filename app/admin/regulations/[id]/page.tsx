@@ -138,12 +138,24 @@ export default function RegulationDetailPage() {
     );
   }
 
-  const typeLabel = {
-    'DECREE': 'Decreto',
-    'RESOLUTION': 'Resolución',
-    'ORDINANCE': 'Ordenanza',
-    'BID': 'Licitación',
-  }[regulation.type] || regulation.type;
+  const getTypeLabel = (type: string) => {
+    switch(type) {
+      case 'DECREE':
+        return 'Decreto';
+      case 'RESOLUTION':
+        return 'Resolución';
+      case 'ORDINANCE':
+        return 'Ordenanza';
+      case 'TRIBUNAL_RESOLUTION':
+        return 'Resolución Tribunal';
+      case 'BID':
+        return 'Licitación';
+      default:
+        return String(type);
+    }
+  };
+
+  const typeLabel = getTypeLabel(regulation.type);
 
   const stateLabel = (() => {
     const s = String(regulation.legalStatus || '').toUpperCase();
