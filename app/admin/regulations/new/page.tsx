@@ -3,26 +3,42 @@
 import { useRouter } from 'next/navigation';
 import { Regulation } from '@/types';
 import RegulationForm from '@/components/RegulationForm';
-import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 
 export default function NewRegulationPage() {
   const router = useRouter();
 
   const handleSave = async (regulation: Partial<Regulation>) => {
-    const response = await fetch('/api/regulations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(regulation),
-    });
+    try {
+      const response = await fetch('/api/regulations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(regulation),
+      });
 
-    if (!response.ok) {
-      throw new Error('Error al crear la normativa');
+      let json: any = null;
+      try {
+        json = await response.json();
+      } catch (e) {
+        // ignore parse errors
+      }
+
+      if (!response.ok) {
+        const message = (json && (json.message || json.error)) || `Error ${response.status}`;
+        throw new Error(message);
+      }
+
+      toast.success('Normativa creada', {
+        description: 'El borrador ha sido creado exitosamente.',
+      });
+      router.push('/admin');
+    } catch (error) {
+      console.error('Error creating regulation', error);
+      toast.error('Error al crear', {
+        description: error instanceof Error ? error.message : 'No se pudo crear la normativa.',
+      });
+      throw error;
     }
-
-    alert('Normativa creada exitosamente como borrador');
-    router.push('/admin');
   };
 
   const handleCancel = () => {
@@ -30,28 +46,19 @@ export default function NewRegulationPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Button onClick={() => router.push('/admin')} variant="outline" className="mb-4"  style={{
-                background: "rgba(255, 255, 255, 0.1)",  // Fondo blanco semi-transparente
-                color: "#6366F1",
-                border: "2px solid #6366F1",
-                backdropFilter: "blur(10px)"
-              }}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver a Administración
-        </Button>
+    <>
+      <a href="/admin" className="back-button">
+        ← Volver a Administración
+      </a>
+
+      <div className="page-header">
+        <h2>Nueva normativa</h2>
+        <p>Completa los campos para crear un borrador</p>
       </div>
 
-      <Card className="shadow-xl border border-gray-100 bg-white/95 backdrop-blur-sm rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-gray-800">Nueva normativa</CardTitle>
-          <CardDescription className="text-gray-600">Completa los campos para crear un borrador</CardDescription>
-        </CardHeader>
-        <CardContent className="text-gray-700">
-          <RegulationForm onSave={handleSave} onCancel={handleCancel} />
-        </CardContent>
-      </Card>
-    </div>
+      <div className="form-card">
+        <RegulationForm onSave={handleSave} onCancel={handleCancel} />
+      </div>
+    </>
   );
 }

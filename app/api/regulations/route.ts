@@ -76,6 +76,9 @@ export async function POST(request: NextRequest) {
       data: newRegulation,
     });
   } catch (error) {
+    // Log the full error to server logs for easier debugging
+    console.error('Error in POST /api/regulations', error);
+
     return NextResponse.json(
       {
         success: false,

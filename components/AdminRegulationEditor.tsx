@@ -2,13 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { Regulation, RegulationType, StateTransition, WorkflowState } from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { ArrowLeft, Clock, RefreshCw, Save, ArrowRight, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Props {
   regulation: Regulation;
@@ -100,6 +95,14 @@ export default function AdminRegulationEditor({ regulation, onSave, onCancel }: 
         fileUrl: uploadedUrl ?? draft.fileUrl ?? regulation.fileUrl,
         pdfUrl: uploadedUrl ?? draft.pdfUrl ?? regulation.pdfUrl,
       });
+      toast.success('Normativa guardada exitosamente', {
+        description: `${draft.specialNumber || regulation.specialNumber} ha sido actualizada.`,
+      });
+    } catch (error) {
+      console.error('Error al guardar:', error);
+      toast.error('Error al guardar', {
+        description: error instanceof Error ? error.message : 'No se pudo guardar la normativa. Intenta de nuevo.',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -108,158 +111,228 @@ export default function AdminRegulationEditor({ regulation, onSave, onCancel }: 
   const isoDate = draft.publicationDate ? format(draft.publicationDate as Date, 'yyyy-MM-dd') : (regulation.publicationDate ? format(regulation.publicationDate, 'yyyy-MM-dd') : '');
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Editor de Normativa</p>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Editar normativa</h1>
-          <p className="text-gray-600 mt-1">Modifica metadatos, archivo PDF y estado.</p>
+    <div className="container">
+      {/* Page Header */}
+      <div className="page-header">
+        <div className="page-header-info">
+          <div className="page-header-label">Detalles de normativa</div>
+          <h2 className="page-header-title">{draft.specialNumber || regulation.specialNumber}</h2>
+          <p className="page-header-subtitle">{draft.title || regulation.title || 'Normativa'}</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={onCancel}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
-          </Button>
-          <Button variant="secondary" onClick={() => {
-            setDraft({ ...regulation });
-            setHistory(regulation.stateHistory ?? []);
-          }}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Restablecer
-          </Button>
+        <div className="page-header-actions">
+          <button onClick={onCancel} className="btn btn-secondary">
+            ← Volver a Administración
+          </button>
+          <button onClick={handleSave} disabled={isSaving} className="btn btn-success">
+            ✓ Guardar Cambios
+          </button>
+          <button onClick={() => { setDraft({ ...regulation }); setHistory(regulation.stateHistory ?? []); }} className="btn btn-secondary">
+            ↻ Restablecer
+          </button>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Metadatos</CardTitle>
-              <CardDescription>Datos que alimentan el encabezado oficial y el workflow</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Tipo de documento</label>
-                  <Select value={(draft.type || regulation.type)} onChange={(e) => handleFieldChange('type', e.target.value as RegulationType)}>
+      {/* Content Grid */}
+      <div className="content-grid">
+        {/* Main Content */}
+        <div>
+          {/* Metadata Section */}
+          <div className="content-card">
+            <div className="card-section">
+              <div className="section-header">
+                <h3 className="section-title">Decreto</h3>
+              </div>
+              <h2 className="section-main-title">{draft.specialNumber || regulation.specialNumber}</h2>
+              <p className="section-subtitle">{draft.title || regulation.title}</p>
+
+              <div className="metadata-grid">
+                <div className="metadata-item">
+                  <span className="metadata-label">Tipo de Documento</span>
+                  <select 
+                    className="form-control"
+                    value={(draft.type || regulation.type)} 
+                    onChange={(e) => handleFieldChange('type', e.target.value as RegulationType)}
+                  >
                     <option value="DECREE">Decreto</option>
                     <option value="RESOLUTION">Resolución</option>
                     <option value="ORDINANCE">Ordenanza</option>
                     <option value="TRIBUNAL_RESOLUTION">Resolución Tribunal</option>
                     <option value="BID">Licitación</option>
-                  </Select>
+                  </select>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Estado</label>
-                  <Select value={(draft.state || regulation.state)} onChange={(e) => handleFieldChange('state', e.target.value as WorkflowState)}>
-                    <option value="DRAFT">Borrador</option>
-                    <option value="REVIEW">En revisión</option>
-                    <option value="APPROVED">Aprobado</option>
-                    <option value="PUBLISHED">Publicado</option>
-                    <option value="ARCHIVED">Archivado</option>
-                  </Select>
+                <div className="metadata-item">
+                  <span className="metadata-label">Número Especial</span>
+                  <input 
+                    type="text" 
+                    className="form-control"
+                    value={draft.specialNumber ?? regulation.specialNumber} 
+                    onChange={(e) => handleFieldChange('specialNumber', e.target.value)} 
+                    placeholder="Ej: NE-2026-005"
+                  />
                 </div>
               </div>
+            </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Número oficial</label>
-                  <Input value={draft.specialNumber ?? regulation.specialNumber} onChange={(e) => handleFieldChange('specialNumber', e.target.value)} />
+            {/* Date and Status Section */}
+            <div className="card-section">
+              <div className="metadata-grid">
+                <div className="metadata-item">
+                  <span className="metadata-label">Fecha de Publicación</span>
+                  <input 
+                    type="date" 
+                    className="form-control"
+                    value={isoDate} 
+                    onChange={(e) => handleDateChange(e.target.value)} 
+                  />
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Referencia / Expediente</label>
-                  <Input value={draft.reference ?? regulation.reference} onChange={(e) => handleFieldChange('reference', e.target.value)} />
+                <div className="metadata-item">
+                  <span className="metadata-label">Estado Legal</span>
+                  <select 
+                    className="form-control"
+                    value={draft.legalStatus || regulation.legalStatus || 'VIGENTE'}
+                    onChange={(e) => handleFieldChange('legalStatus', e.target.value)}
+                  >
+                    <option value="VIGENTE">Vigente</option>
+                    <option value="SIN_ESTADO">Sin estado</option>
+                    <option value="PARCIAL">Derogado Parcialmente</option>
+                  </select>
                 </div>
               </div>
+            </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Fecha de publicación</label>
-                  <Input type="date" value={isoDate} onChange={(e) => handleDateChange(e.target.value)} />
-                </div>
+            {/* Reference Section */}
+            <div className="card-section">
+              <div className="metadata-item">
+                <span className="metadata-label">Referencia / Expediente</span>
+                <input 
+                  type="text" 
+                  className="form-control"
+                  value={draft.reference ?? regulation.reference} 
+                  onChange={(e) => handleFieldChange('reference', e.target.value)} 
+                  placeholder="Ej: EXP-2026-00001"
+                />
               </div>
+            </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-700">Título</label>
-                <Input value={draft.specialNumber ? draft.specialNumber : regulation.specialNumber} onChange={(e) => handleFieldChange('specialNumber', e.target.value)} />
-              </div>
-            </CardContent>
-          </Card>
+            {/* Keywords Section */}
+            <div className="card-section">
+              <h3 className="section-title">Palabras Clave</h3>
+              <input 
+                type="text" 
+                className="form-control"
+                defaultValue={draft.keywords?.join(', ') || regulation.keywords?.join(', ') || ''}
+                onChange={(e) => handleFieldChange('keywords', e.target.value.split(',').map(k => k.trim()))}
+                placeholder="Palabras clave separadas por comas"
+              />
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>PDF firmado</CardTitle>
-              <CardDescription>Sube el PDF ya firmado para asociarlo al decreto.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Archivo PDF</label>
-                <Input type="file" accept="application/pdf" onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)} />
-                <p className="text-xs text-gray-500 mt-1">Se espera un PDF completo y firmado digitalmente. Este editor solo asocia el archivo.</p>
-              </div>
-              {pdfFile && <div className="text-sm text-gray-700">Archivo seleccionado: <span className="font-medium">{pdfFile.name}</span></div>}
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={handleSave} disabled={isSaving}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Guardar
-                </Button>
-                <Button variant="outline" onClick={() => setPdfFile(null)} disabled={isSaving}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Limpiar PDF
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Workflow</CardTitle>
-              <CardDescription>Gestiona el ciclo de vida</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Badge className="text-sm py-1 px-3">{stateLabels[(draft.state as WorkflowState) || regulation.state]}</Badge>
-                <span className="text-xs text-gray-500">{(draft.type as RegulationType) || regulation.type}</span>
-              </div>
-              {availableTransitions.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Mover a:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {availableTransitions.map((state) => (
-                      <Button key={state} variant="outline" size="sm" onClick={() => handleStateTransition(state)}>
-                        <ArrowRight className="h-4 w-4 mr-1" />
-                        {stateLabels[state]}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+            {/* PDF Section */}
+            <div className="card-section">
+              <h3 className="section-title">Documento Original</h3>
+              {regulation.fileUrl || regulation.pdfUrl ? (
+                <a href={regulation.fileUrl || regulation.pdfUrl} className="pdf-link" target="_blank" rel="noopener noreferrer">
+                  📄 Ver PDF
+                </a>
               ) : (
-                <p className="text-sm text-gray-500">Sin transiciones disponibles.</p>
+                <p className="metadata-label">No hay PDF asociado</p>
               )}
-
-              <div className="pt-2 space-y-3">
-                <p className="text-sm font-medium text-gray-700">Historial</p>
-                <div className="space-y-2">
-                  {history.map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-3 text-sm">
-                      <Clock className="h-4 w-4 text-gray-500 mt-0.5" />
-                      <div>
-                        <p className="font-medium">
-                          {item.fromState ? `${stateLabels[item.fromState]} → ${stateLabels[item.toState]}` : `Creado como ${stateLabels[item.toState]}`}
-                        </p>
-                        <p className="text-gray-500">{format(item.timestamp, 'dd/MM/yyyy HH:mm')} · {item.userRole}</p>
-                        {item.notes && <p className="text-gray-500 text-xs">{item.notes}</p>}
-                      </div>
-                    </div>
-                  ))}
+              <div className="file-upload-edit" onClick={() => document.getElementById('pdf-upload')?.click()}>
+                <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>📁</div>
+                <div style={{fontWeight: '500', marginBottom: '0.25rem'}}>Reemplazar PDF</div>
+                <div style={{fontSize: '0.8125rem', color: 'var(--gray-500)'}}>
+                  Haz clic para seleccionar o arrastra el archivo aquí
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              <input 
+                type="file" 
+                id="pdf-upload"
+                accept=".pdf" 
+                onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+                style={{display: 'none'}}
+              />
+              {pdfFile && (
+                <div style={{marginTop: '0.75rem', padding: '0.75rem', background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: '0.5rem', fontSize: '0.9375rem', color: 'var(--gray-700)'}}>
+                  📄 {pdfFile.name}
+                </div>
+              )}
+            </div>
+          </div>
 
+          {/* Content Section */}
+          <div className="content-card" style={{marginTop: '2rem'}}>
+            <div className="card-section">
+              <h3 className="section-title">Contenido</h3>
+              <textarea 
+                className="form-control"
+                value={draft.content || regulation.content || ''}
+                onChange={(e) => handleFieldChange('content', e.target.value)}
+                placeholder="Contenido de la normativa..."
+                style={{minHeight: '200px'}}
+              />
+            </div>
+
+            {/* Edit Mode Actions */}
+            <div className="card-section" style={{display: 'flex', gap: '0.75rem', paddingTop: '1.5rem', borderTop: '1px solid var(--gray-200)', marginTop: '1.5rem'}}>
+              <button onClick={onCancel} className="btn btn-secondary" style={{flex: 1}}>
+                ✕ Cancelar
+              </button>
+              <button onClick={handleSave} disabled={isSaving} className="btn btn-success" style={{flex: 2}}>
+                ✓ Guardar Cambios
+              </button>
+            </div>
+          </div>
         </div>
+
+        {/* Workflow Sidebar */}
+        <aside>
+          <div className="workflow-card">
+            <h3 className="workflow-title">Workflow</h3>
+            <p className="workflow-subtitle">Gestiona el flujo de aprobación de la normativa</p>
+
+            <div className="workflow-status">
+              <span>✓</span>
+              <span>{stateLabels[(draft.state as WorkflowState) || regulation.state]}</span>
+            </div>
+
+            <div className="workflow-actions">
+              {availableTransitions.length > 0 ? (
+                <>
+                  <div className="workflow-actions-label">Transiciones disponibles</div>
+                  {availableTransitions.map((state) => (
+                    <button 
+                      key={state}
+                      className="workflow-button" 
+                      onClick={() => handleStateTransition(state)}
+                    >
+                      <span>📦</span>
+                      <span>{stateLabels[state]}</span>
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <p style={{fontSize: '0.875rem', color: 'var(--gray-500)'}}>Sin transiciones disponibles.</p>
+              )}
+            </div>
+
+            <div className="workflow-history">
+              <div className="workflow-history-label">Historial</div>
+              <div className="workflow-timeline">
+                {history.map((item, idx) => (
+                  <div key={idx} className="timeline-item">
+                    <div className="timeline-icon">✓</div>
+                    <div className="timeline-content">
+                      <div className="timeline-title">
+                        {item.fromState ? `${stateLabels[item.fromState]} → ${stateLabels[item.toState]}` : `Creado como ${stateLabels[item.toState]}`}
+                      </div>
+                      <div className="timeline-meta">{format(item.timestamp, 'dd/MM/yyyy HH:mm')} - {item.userRole}</div>
+                      {item.notes && <div style={{fontSize: '0.875rem', color: 'var(--gray-500)'}}>{item.notes}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

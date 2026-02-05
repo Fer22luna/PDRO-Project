@@ -1,169 +1,153 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Regulation, WorkflowState } from '@/types';
-import { downloadRegulationPDF } from '@/lib/pdfGenerator';
-import RegulationForm from '@/components/RegulationForm';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { Regulation } from '@/types';
 import AdminRegulationEditor from '@/components/AdminRegulationEditor';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Edit, Trash2, ArrowRight, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { normalizeRegulation } from '@/lib/utils';
+import { toast } from 'sonner';
 
-export default function AdminRegulationDetailPage() {
-  const params = useParams<{ id: string }>();
-  const router = useRouter();
+export default function RegulationDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
+
   const [regulation, setRegulation] = useState<Regulation | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editData, setEditData] = useState({
+    fecha: '',
+    estado: '',
+    keywords: '',
+    contenido: '',
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (params?.id) {
-      const fetchData = async () => {
-        const response = await fetch(`/api/regulations/${params.id}`);
-        if (!response.ok) {
-          setRegulation(null);
-          return;
-        }
-        const json = await response.json();
-        setRegulation(normalizeRegulation(json.data));
-      };
+    const fetchRegulation = async () => {
+      try {
+        const response = await fetch(`/api/regulations/${id}`);
+        if (!response.ok) throw new Error('Not found');
+        const data = await response.json();
+        setRegulation(data.data);
+        setEditData({
+          fecha: data.data.publicationDate ? new Date(data.data.publicationDate).toISOString().split('T')[0] : '',
+          estado: data.data.legalStatus || 'SIN_ESTADO',
+          keywords: data.data.keywords?.join(', ') || '',
+          contenido: data.data.content || '',
+        });
+      } catch (error) {
+        console.error('Error fetching regulation:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      fetchData();
+    fetchRegulation();
+  }, [id]);
+
+  const handleCancelEdit = () => {
+    if (confirm('¿Descartar los cambios realizados?')) {
+      setIsEditMode(false);
+      if (regulation) {
+        setEditData({
+          fecha: regulation.publicationDate ? new Date(regulation.publicationDate).toISOString().split('T')[0] : '',
+          estado: regulation.legalStatus || 'SIN_ESTADO',
+          keywords: regulation.keywords?.join(', ') || '',
+          contenido: regulation.content || '',
+        });
+      }
     }
-  }, [params?.id]);
+  };
 
-  if (!regulation) {
+  // Handler used by the full editor which supports workflow transitions
+  const handleSaveFullEditor = async (updated: Partial<Regulation>) => {
+    try {
+      const response = await fetch(`/api/regulations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+
+      if (!response.ok) {
+        const json = await response.json().catch(() => null);
+        const message = (json && (json.message || json.error)) || `Error ${response.status}`;
+        throw new Error(message);
+      }
+
+      const json = await response.json();
+      setRegulation(json.data);
+      setIsEditMode(false);
+      toast.success('Cambios guardados', {
+        description: 'La normativa ha sido actualizada exitosamente.',
+      });
+    } catch (error) {
+      console.error('Error saving regulation (full editor)', error);
+      toast.error('Error al guardar', {
+        description: error instanceof Error ? error.message : 'No se pudieron guardar los cambios.',
+      });
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      const response = await fetch(`/api/regulations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicationDate: editData.fecha,
+          legalStatus: editData.estado,
+          keywords: editData.keywords.split(',').map(k => k.trim()).filter(k => k),
+          content: editData.contenido,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Error saving');
+
+      const updated = await response.json();
+      setRegulation(updated.data);
+      setIsEditMode(false);
+      alert('Cambios guardados exitosamente!');
+    } catch (error) {
+      alert('Error al guardar los cambios');
+      console.error(error);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-gray-500">Normativa no encontrada.</p>
-            <div className="flex justify-center mt-4">
-              <Button onClick={() => router.push('/admin')} variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver a Administración
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="page-container">
+        <p>Cargando...</p>
       </div>
     );
   }
 
-  const handleSave = async (updatedRegulation: Partial<Regulation>) => {
-    if (!regulation) return;
+  if (!regulation) {
+    return (
+      <div className="page-container">
+        <p>Normativa no encontrada</p>
+      </div>
+    );
+  }
 
-    const response = await fetch(`/api/regulations/${regulation.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedRegulation),
-    });
+  if (isEditMode) {
+    return (
+      <AdminRegulationEditor
+        regulation={regulation}
+        onSave={handleSaveFullEditor}
+        onCancel={handleCancelEdit}
+      />
+    );
+  }
 
-    if (!response.ok) {
-      throw new Error('Error al actualizar la normativa');
-    }
+  const typeLabel = {
+    'DECREE': 'Decreto',
+    'RESOLUTION': 'Resolución',
+    'ORDINANCE': 'Ordenanza',
+    'BID': 'Licitación',
+  }[regulation.type] || regulation.type;
 
-    const json = await response.json();
-    setRegulation(normalizeRegulation(json.data));
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-  };
-
-  const handleDelete = () => {
-    if (confirm('¿Está seguro de que desea eliminar esta normativa?')) {
-      const remove = async () => {
-        const response = await fetch(`/api/regulations/${regulation?.id}`, {
-          method: 'DELETE',
-        });
-
-        if (!response.ok) {
-          alert('Error al eliminar la normativa');
-          return;
-        }
-
-        alert('Normativa eliminada exitosamente');
-        router.push('/admin');
-      };
-
-      remove();
-    }
-  };
-
-  const handleStateTransition = (newState: WorkflowState) => {
-    if (confirm(`¿Está seguro de cambiar el estado a ${newState}?`)) {
-      const transition = async () => {
-        const response = await fetch(`/api/regulations/${regulation?.id}/transition`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ toState: newState }),
-        });
-
-        if (!response.ok) {
-          alert('Transición de estado inválida');
-          return;
-        }
-
-        const json = await response.json();
-        setRegulation(normalizeRegulation(json.data));
-      };
-
-      transition();
-    }
-  };
-
-  const getAvailableTransitions = (): WorkflowState[] => {
-    switch (regulation.state) {
-      case 'DRAFT':
-        return ['REVIEW'];
-      case 'REVIEW':
-        return ['APPROVED', 'DRAFT'];
-      case 'APPROVED':
-        return ['PUBLISHED', 'REVIEW'];
-      case 'PUBLISHED':
-        return ['ARCHIVED'];
-      case 'ARCHIVED':
-        return [];
-      default:
-        return [];
-    }
-  };
-
-  const getStateLabel = (state: WorkflowState): string => {
-    const labels: Record<WorkflowState, string> = {
-      DRAFT: 'Borrador',
-      REVIEW: 'En Revisión',
-      APPROVED: 'Aprobado',
-      PUBLISHED: 'Publicado',
-      ARCHIVED: 'Archivado',
-    };
-    return labels[state];
-  };
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'DECREE':
-        return 'Decreto';
-      case 'RESOLUTION':
-        return 'Resolución';
-      case 'ORDINANCE':
-        return 'Ordenanza';
-      case 'TRIBUNAL_RESOLUTION':
-        return 'Resolución Tribunal';
-      case 'BID':
-        return 'Licitación';
-      default:
-        return type;
-    }
-  };
-
-  const getLegalStatusLabel = (status?: string) => {
-    switch (status) {
+  const stateLabel = (() => {
+    const s = String(regulation.legalStatus || '').toUpperCase();
+    switch (s) {
       case 'VIGENTE':
         return 'Vigente';
       case 'PARCIAL':
@@ -172,198 +156,213 @@ export default function AdminRegulationDetailPage() {
       default:
         return 'Sin estado';
     }
-  };
-
-  const handleDownload = () => {
-    const storedUrl = regulation?.fileUrl || regulation?.pdfUrl;
-    if (storedUrl) {
-      window.open(storedUrl, '_blank', 'noopener');
-      return;
-    }
-    if (regulation) {
-      downloadRegulationPDF(regulation);
-    }
-  };
-
-  if (isEditing) {
-    return (
-      <AdminRegulationEditor regulation={regulation} onSave={handleSave} onCancel={handleCancel} />
-    );
-  }
-
-  const availableTransitions = getAvailableTransitions();
+  })();
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Detalle de normativa</p>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-            {regulation.specialNumber}
-          </h1>
-          <p className="text-gray-600 mt-1">{regulation.reference}</p>
+    <>
+      {/* Page Header */}
+      <div className="page-header-detail">
+        <div className="page-header-info-detail">
+          <div className="page-header-label">Detalles de normativa</div>
+          <h2 className="page-header-title-detail">{regulation.specialNumber}</h2>
+          <p className="page-header-subtitle-detail">{regulation.reference}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => router.push('/admin')} variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver a Administración
-          </Button>
-          <Button onClick={() => setIsEditing(true)} variant="outline">
-            <Edit className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
-          <Button onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Descargar PDF
-          </Button>
-          <Button onClick={handleDelete} variant="destructive">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Eliminar
-          </Button>
+        <div className="page-header-actions-detail">
+          <Link href="/admin" className="btn btn-secondary">
+            ← Volver a Administración
+          </Link>
+          <button
+            className="btn btn-primary btn-edit-toggle"
+            onClick={() => setIsEditMode(!isEditMode)}
+            style={{ display: isEditMode ? 'none' : 'inline-flex' }}
+          >
+            ✏️ Editar
+          </button>
+          {regulation.fileUrl && (
+            <a href={regulation.fileUrl} target="_blank" rel="noreferrer" className="btn btn-secondary">
+              ⬇️ Descargar PDF
+            </a>
+          )}
+          <button className="btn btn-danger">
+            🗑️ Eliminar
+          </button>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3 space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <Badge className="mb-2">{getTypeLabel(regulation.type)}</Badge>
-                  <CardTitle className="text-2xl md:text-3xl">{regulation.specialNumber}</CardTitle>
-                  <CardDescription className="text-lg mt-2">{regulation.reference}</CardDescription>
-                </div>
+      {/* Content Grid */}
+      <div className="content-grid-detail">
+        {/* Main Content */}
+        <div>
+          {/* Metadata Section */}
+          <div className="content-card-detail">
+            <div className="card-section-detail">
+              <div className="section-header-detail">
+                <h3 className="section-title-detail">{typeLabel}</h3>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Fecha de Publicación</p>
-                  <p className="font-medium">{format(regulation.publicationDate, 'dd/MM/yyyy')}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Estado Legal</p>
-                  <p className="font-medium">{getLegalStatusLabel(regulation.legalStatus)}</p>
-                </div>
-              </div>
+              <h2 className="section-main-title-detail">{regulation.specialNumber}</h2>
+              <p className="section-subtitle-detail">{regulation.reference}</p>
 
-              <div>
-                <p className="text-sm text-gray-600">Palabras Clave</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {regulation.keywords.map((keyword, index) => (
-                    <Badge key={index} variant="outline">
-                      {keyword}
-                    </Badge>
-                  ))}
+              <div className="metadata-grid-detail">
+                <div className="metadata-item-detail">
+                  <span className="metadata-label-detail">Fecha de Publicación</span>
+                  {!isEditMode ? (
+                    <span className="metadata-value-detail">
+                      {regulation.publicationDate
+                        ? new Date(regulation.publicationDate).toLocaleDateString('es-ES', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })
+                        : '—'}
+                    </span>
+                  ) : (
+                    <input
+                      type="date"
+                      className="form-control-detail edit-mode-control"
+                      value={editData.fecha}
+                      onChange={(e) => setEditData({ ...editData, fecha: e.target.value })}
+                    />
+                  )}
+                </div>
+                <div className="metadata-item-detail">
+                  <span className="metadata-label-detail">Estado Legal</span>
+                          {!isEditMode ? (
+                    <span className="metadata-value-detail">{stateLabel}</span>
+                  ) : (
+                    <select
+                      className="form-control-detail edit-mode-control"
+                      value={editData.estado}
+                      onChange={(e) => setEditData({ ...editData, estado: e.target.value })}
+                    >
+                      <option value="VIGENTE">Vigente</option>
+                      <option value="SIN_ESTADO">Sin estado</option>
+                      <option value="PARCIAL">Parcialmente vigente</option>
+                    </select>
+                  )}
                 </div>
               </div>
+            </div>
 
-              {(regulation.fileUrl || regulation.pdfUrl) && (
-                <div>
-                  <p className="text-sm text-gray-600">Documento Original</p>
-                  <a
-                    className="text-blue-600 underline"
-                    href={regulation.fileUrl || regulation.pdfUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Ver PDF
-                  </a>
+            {/* Keywords Section */}
+            <div className="card-section-detail">
+              <h3 className="section-title-detail">Palabras Clave</h3>
+              {!isEditMode ? (
+                <div className="keywords-detail">
+                  {regulation.keywords && regulation.keywords.length > 0 ? (
+                    regulation.keywords.map((keyword) => (
+                      <span key={keyword} className="keyword-tag-detail">
+                        {keyword}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-gray-500">Sin palabras clave</p>
+                  )}
                 </div>
+              ) : (
+                <input
+                  type="text"
+                  className="form-control-detail edit-mode-control"
+                  value={editData.keywords}
+                  onChange={(e) => setEditData({ ...editData, keywords: e.target.value })}
+                  placeholder="Palabras clave separadas por comas"
+                />
               )}
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Contenido</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="prose max-w-none">
-                {regulation.content.split('\n').map((paragraph, index) => {
-                  if (paragraph.startsWith('# ')) {
-                    return (
-                      <h1 key={index} className="text-2xl font-bold mt-6 mb-4">
-                        {paragraph.replace('# ', '')}
-                      </h1>
-                    );
-                  } else if (paragraph.startsWith('## ')) {
-                    return (
-                      <h2 key={index} className="text-xl font-semibold mt-4 mb-3">
-                        {paragraph.replace('## ', '')}
-                      </h2>
-                    );
-                  } else if (paragraph.trim()) {
-                    return (
-                      <p key={index} className="mb-3 text-gray-700">
-                        {paragraph}
-                      </p>
-                    );
-                  }
-                  return null;
-                })}
+            {/* PDF Section */}
+            {regulation.fileUrl && (
+              <div className="card-section-detail">
+                <h3 className="section-title-detail">Documento Original</h3>
+                {!isEditMode ? (
+                  <a href={regulation.fileUrl} target="_blank" rel="noreferrer" className="pdf-link-detail">
+                    📄 Ver PDF
+                  </a>
+                ) : (
+                  <div
+                    className="file-upload-edit-detail"
+                    onClick={() => document.getElementById(`pdf-upload-${id}`)?.click()}
+                  >
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
+                    <div style={{ fontWeight: 500, marginBottom: '0.25rem' }}>Reemplazar PDF</div>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>
+                      Haz clic para seleccionar o arrastra el archivo aquí
+                    </div>
+                  </div>
+                )}
+                <input type="file" id={`pdf-upload-${id}`} accept=".pdf" style={{ display: 'none' }} />
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
+
+          {/* Content Section */}
+          <div className="content-card-detail" style={{ marginTop: '2rem' }}>
+            <div className="card-section-detail">
+              <h3 className="section-title-detail">Contenido</h3>
+              {!isEditMode ? (
+                <div className="content-display-detail">{regulation.content}</div>
+              ) : (
+                <textarea
+                  className="form-control-detail edit-mode-control"
+                  value={editData.contenido}
+                  onChange={(e) => setEditData({ ...editData, contenido: e.target.value })}
+                  placeholder="Contenido de la normativa..."
+                  style={{ minHeight: '150px' }}
+                />
+              )}
+            </div>
+
+            {/* Edit Mode Actions */}
+            {isEditMode && (
+              <div className="card-section-detail edit-mode-actions-detail">
+                <button className="btn btn-secondary" onClick={handleCancelEdit} style={{ flex: 1 }}>
+                  ✕ Cancelar
+                </button>
+                <button className="btn btn-success" onClick={handleSaveChanges} style={{ flex: 2 }}>
+                  ✓ Guardar Cambios
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Workflow</CardTitle>
-              <CardDescription>Gestiona el flujo de aprobación de la normativa</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Badge className="text-lg py-2 px-4">{getStateLabel(regulation.state)}</Badge>
-                <span className="text-xs text-gray-500">{getTypeLabel(regulation.type)}</span>
-              </div>
+        {/* Workflow Sidebar */}
+        <aside>
+          <div className="workflow-card-detail">
+            <h3 className="workflow-title-detail">Workflow</h3>
+            <p className="workflow-subtitle-detail">Gestiona el flujo de aprobación de la normativa</p>
 
-              {availableTransitions.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Transiciones disponibles</p>
-                  <div className="flex flex-wrap gap-2">
-                    {availableTransitions.map((state) => (
-                      <Button
-                        key={state}
-                        onClick={() => handleStateTransition(state)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                        {getStateLabel(state)}
-                      </Button>
-                    ))}
+            <div className="workflow-status-detail">
+              <span>✓</span>
+              <span>{typeLabel} - {regulation.state}</span>
+            </div>
+
+            <div className="workflow-actions-detail">
+              <div className="workflow-actions-label-detail">Transiciones disponibles</div>
+              <button className="workflow-button-detail">
+                <span>📦</span>
+                <span>Archivado</span>
+              </button>
+            </div>
+
+            <div className="workflow-history-detail">
+              <div className="workflow-history-label-detail">Historial</div>
+              <div className="workflow-timeline-detail">
+                <div className="timeline-item-detail">
+                  <div className="timeline-icon-detail">✓</div>
+                  <div className="timeline-content-detail">
+                    <div className="timeline-title-detail">Creado</div>
+                    <div className="timeline-meta-detail">
+                      {regulation.createdAt
+                        ? new Date(regulation.createdAt).toLocaleString('es-ES')
+                        : 'Sin fecha'}
+                    </div>
                   </div>
                 </div>
-              )}
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-700">Historial</p>
-                <div className="space-y-2">
-                  {regulation.stateHistory.map((transition, index) => (
-                    <div key={index} className="flex items-start gap-3 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                      <div>
-                        <p className="font-medium">
-                          {transition.fromState ? (
-                            <>{getStateLabel(transition.fromState)} → {getStateLabel(transition.toState)}</>
-                          ) : (
-                            <>Creado como {getStateLabel(transition.toState)}</>
-                          )}
-                        </p>
-                        <p className="text-gray-500">
-                          {format(transition.timestamp, 'dd/MM/yyyy HH:mm')} - {transition.userRole}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </aside>
       </div>
-    </div>
+    </>
   );
 }

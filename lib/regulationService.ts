@@ -139,6 +139,17 @@ export async function fetchRegulationByIdFromDb(id: string): Promise<Regulation 
   return data ? mapRegulation(data as RegulationRow) : null;
 }
 
+function normalizeLegalStatus(value?: string | null): string {
+  if (!value) return 'SIN_ESTADO';
+  const v = String(value).trim().toUpperCase();
+  if (v === 'VIGENTE' || v === 'PARCIAL' || v === 'SIN_ESTADO') return v;
+  // Accept common spanish variants
+  if (v === 'DEROGADO') return 'PARCIAL';
+  if (v === 'SIN-ESTADO' || v === 'SIN ESTADO' || v === 'SIN_ESTADO') return 'SIN_ESTADO';
+  if (v === 'VIG' || v === 'VIGENCIA') return 'VIGENTE';
+  return 'SIN_ESTADO';
+}
+
 export async function createRegulationInDb(payload: Partial<Regulation>): Promise<Regulation> {
   const supabase = getSupabaseServerClient();
   const insertData = {
@@ -149,7 +160,7 @@ export async function createRegulationInDb(payload: Partial<Regulation>): Promis
     content: payload.content,
     keywords: payload.keywords ?? [],
     state: payload.state ?? 'DRAFT',
-    legal_status: payload.legalStatus ?? 'SIN_ESTADO',
+    legal_status: normalizeLegalStatus(payload.legalStatus),
     pdf_url: payload.pdfUrl ?? null,
     file_url: payload.fileUrl ?? null,
   };
@@ -182,7 +193,7 @@ export async function updateRegulationInDb(
     content: payload.content,
     keywords: payload.keywords ?? [],
     state: payload.state,
-    legal_status: payload.legalStatus,
+    legal_status: normalizeLegalStatus(payload.legalStatus),
     pdf_url: payload.pdfUrl ?? null,
     file_url: payload.fileUrl ?? null,
     updated_at: new Date().toISOString(),

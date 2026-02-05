@@ -1,13 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Regulation, RegulationType, WorkflowState } from '@/types';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Regulation, RegulationType } from '@/types';
+import { toast } from 'sonner';
 
 interface RegulationFormProps {
   regulation?: Regulation;
@@ -17,36 +12,85 @@ interface RegulationFormProps {
 
 export default function RegulationForm({ regulation, onSave, onCancel }: RegulationFormProps) {
   const [formData, setFormData] = useState({
-    type: regulation?.type || 'DECREE' as RegulationType,
-    specialNumber: regulation?.specialNumber || '',
-    publicationDate: regulation?.publicationDate
+    tipo: regulation?.type || 'DECREE',
+    numeroEspecial: regulation?.specialNumber || '',
+    fechaPublicacion: regulation?.publicationDate
       ? new Date(regulation.publicationDate).toISOString().split('T')[0]
-      : '',
-    reference: regulation?.reference || '',
-    content: regulation?.content || '',
-    keywords: regulation?.keywords?.join(', ') || '',
-    legalStatus: regulation?.legalStatus || 'SIN_ESTADO',
+      : new Date().toISOString().split('T')[0],
+    estadoLegal: regulation?.legalStatus || 'SIN_ESTADO',
+    referencia: regulation?.reference || '',
+    palabrasClave: regulation?.keywords?.join(', ') || '',
+    contenido: regulation?.content || '',
   });
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
+
+  const [pdfFile, setpdfFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{ file: File; name: string; size: string } | null>(null);
 
-  const uploadFileIfNeeded = async (): Promise<string | undefined> => {
-    if (!pdfFile) return regulation?.fileUrl || regulation?.pdfUrl;
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
 
-    const payload = new FormData();
-    payload.append('file', pdfFile);
-
-    const response = await fetch('/api/uploads/regulation-file', {
-      method: 'POST',
-      body: payload,
-    });
-
-    if (!response.ok) {
-      throw new Error('No se pudo subir el PDF. Intenta nuevamente.');
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      setSelectedFile({
+        file,
+        name: file.name,
+        size: formatFileSize(file.size),
+      });
+      setpdfFile(file);
+      toast.success('Archivo seleccionado', {
+        description: `${file.name} (${formatFileSize(file.size)})`,
+      });
+    } else {
+      toast.error('Archivo inválido', {
+        description: 'Por favor selecciona un archivo PDF válido.',
+      });
     }
+  };
 
-    const json = await response.json();
-    return json.url as string;
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.add('active');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('active');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('active');
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type === 'application/pdf') {
+      setSelectedFile({
+        file: files[0],
+        name: files[0].name,
+        size: formatFileSize(files[0].size),
+      });
+      setpdfFile(files[0]);
+      toast.success('Archivo seleccionado', {
+        description: `${files[0].name} (${formatFileSize(files[0].size)})`,
+      });
+    } else {
+      toast.error('Archivo inválido', {
+        description: 'Por favor arrastra un archivo PDF válido.',
+      });
+    }
+  };
+
+  const removeFile = () => {
+    setSelectedFile(null);
+    setpdfFile(null);
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,186 +98,233 @@ export default function RegulationForm({ regulation, onSave, onCancel }: Regulat
     setIsSubmitting(true);
 
     try {
-      const uploadedUrl = await uploadFileIfNeeded();
+      let uploadedUrl: string | undefined;
+
+      if (pdfFile) {
+        const payload = new FormData();
+        payload.append('file', pdfFile);
+
+        const response = await fetch('/api/uploads/regulation-file', {
+          method: 'POST',
+          body: payload,
+        });
+
+        if (!response.ok) {
+          throw new Error('No se pudo subir el PDF. Intenta nuevamente.');
+        }
+
+        const json = await response.json();
+        uploadedUrl = json.url as string;
+        toast.success('PDF subido correctamente');
+      }
+
       const regulationData: Partial<Regulation> = {
-        ...regulation,
-        type: formData.type,
-        specialNumber: formData.specialNumber,
-        publicationDate: new Date(formData.publicationDate),
-        reference: formData.reference,
-        content: formData.content,
-        keywords: formData.keywords.split(',').map(k => k.trim()).filter(k => k),
-        legalStatus: formData.legalStatus as any,
-        fileUrl: uploadedUrl,
-        pdfUrl: uploadedUrl,
+        type: formData.tipo as RegulationType,
+        specialNumber: formData.numeroEspecial,
+        publicationDate: new Date(formData.fechaPublicacion),
+        reference: formData.referencia,
+        content: formData.contenido,
+        keywords: formData.palabrasClave.split(',').map((k) => k.trim()).filter((k) => k),
+        legalStatus: formData.estadoLegal as any,
+        ...(uploadedUrl && { fileUrl: uploadedUrl, pdfUrl: uploadedUrl }),
       };
 
       await onSave(regulationData);
+      toast.success('Normativa creada', {
+        description: `${formData.numeroEspecial} ha sido creada exitosamente como borrador.`,
+      });
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Error al guardar la normativa');
+      toast.error('Error al crear normativa', {
+        description: error instanceof Error ? error.message : 'No se pudo crear la normativa. Intenta de nuevo.',
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   return (
-    <form onSubmit={handleSubmit}>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {regulation ? 'Editar Normativa' : 'Nueva Normativa'}
-          </CardTitle>
-          <CardDescription>
-            Complete los campos para {regulation ? 'actualizar' : 'crear'} la normativa
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tipo <span className="text-red-500">*</span>
+    <form onSubmit={handleSubmit} id="normativaForm">
+      {/* Información Básica */}
+      <div className="form-section">
+        <h3 className="form-section-title">Información Básica</h3>
+
+        <div className="form-grid two-columns">
+          <div className="form-group">
+            <label htmlFor="tipo">
+              Tipo <span className="required">*</span>
             </label>
-            <Select
-              value={formData.type}
-              onChange={(e) => handleChange('type', e.target.value)}
+            <select
+              id="tipo"
+              className="form-control"
+              value={formData.tipo}
+              onChange={(e) => handleChange('tipo', e.target.value)}
               required
             >
+              <option value="">Seleccionar...</option>
               <option value="DECREE">Decreto</option>
               <option value="RESOLUTION">Resolución</option>
               <option value="ORDINANCE">Ordenanza</option>
-              <option value="TRIBUNAL_RESOLUTION">Resolución Tribunal</option>
               <option value="BID">Licitación</option>
-            </Select>
+            </select>
           </div>
 
-          {/* Special Number */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Número Especial <span className="text-red-500">*</span>
+          <div className="form-group">
+            <label htmlFor="numero-especial">
+              Número Especial <span className="required">*</span>
             </label>
-            <Input
+            <input
               type="text"
-              value={formData.specialNumber}
-              onChange={(e) => handleChange('specialNumber', e.target.value)}
+              id="numero-especial"
+              className="form-control"
               placeholder="Ej: D-2024-001"
+              value={formData.numeroEspecial}
+              onChange={(e) => handleChange('numeroEspecial', e.target.value)}
               required
             />
           </div>
 
-          {/* Publication Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Fecha de Publicación <span className="text-red-500">*</span>
+          <div className="form-group">
+            <label htmlFor="fecha-publicacion">
+              Fecha de Publicación <span className="required">*</span>
             </label>
-            <Input
+            <input
               type="date"
-              value={formData.publicationDate}
-              onChange={(e) => handleChange('publicationDate', e.target.value)}
+              id="fecha-publicacion"
+              className="form-control"
+              value={formData.fechaPublicacion}
+              onChange={(e) => handleChange('fechaPublicacion', e.target.value)}
               required
             />
           </div>
 
-          {/* Reference */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Referencia <span className="text-red-500">*</span>
+          <div className="form-group">
+            <label htmlFor="estado-legal">
+              Estado Legal <span className="required">*</span>
             </label>
-            <Input
-              type="text"
-              value={formData.reference}
-              onChange={(e) => handleChange('reference', e.target.value)}
-              placeholder="Breve descripción de la normativa"
+            <select
+              id="estado-legal"
+              className="form-control"
+              value={formData.estadoLegal}
+              onChange={(e) => handleChange('estadoLegal', e.target.value)}
               required
-            />
-          </div>
-
-          {/* Keywords */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Palabras Clave <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              value={formData.keywords}
-              onChange={(e) => handleChange('keywords', e.target.value)}
-              placeholder="Separadas por comas: presupuesto, finanzas, 2024"
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Ingrese palabras clave separadas por comas
-            </p>
-          </div>
-
-          {/* Content */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Contenido <span className="text-red-500">*</span>
-            </label>
-            <Textarea
-              value={formData.content}
-              onChange={(e) => handleChange('content', e.target.value)}
-              placeholder="Contenido completo de la normativa. Use # para títulos principales y ## para subtítulos."
-              rows={15}
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Formato: Use # para títulos y ## para subtítulos
-            </p>
-          </div>
-
-          {/* Current State Badge */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Estado Legal</label>
-            <Select value={formData.legalStatus} onChange={(e) => handleChange('legalStatus', e.target.value)}>
-              <option value="SIN_ESTADO">Sin estado</option>
+            >
+              <option value="">Seleccionar...</option>
               <option value="VIGENTE">Vigente</option>
+              <option value="SIN_ESTADO">Sin estado</option>
               <option value="PARCIAL">Parcialmente vigente</option>
-            </Select>
+            </select>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              PDF firmado
+        <div className="form-grid">
+          <div className="form-group full-width">
+            <label htmlFor="referencia">
+              Referencia <span className="required">*</span>
             </label>
-            <Input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+            <input
+              type="text"
+              id="referencia"
+              className="form-control"
+              placeholder="Breve descripción de la normativa"
+              value={formData.referencia}
+              onChange={(e) => handleChange('referencia', e.target.value)}
+              required
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Sube el PDF oficial firmado. Se almacenará en Supabase Storage y se mostrará en la vista pública.
-            </p>
-            {regulation?.fileUrl && (
-              <p className="text-xs text-gray-600 mt-2">
-                Archivo actual: <a className="underline" href={regulation.fileUrl} target="_blank" rel="noreferrer">Ver PDF</a>
-              </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido y Palabras Clave */}
+      <div className="form-section">
+        <h3 className="form-section-title">Contenido y Palabras Clave</h3>
+        <div className="form-grid">
+          <div className="form-group">
+            <label htmlFor="palabras-clave">
+              Palabras Clave <span className="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="palabras-clave"
+              className="form-control"
+              placeholder="Separadas por comas: presupuesto, finanzas, 2024"
+              value={formData.palabrasClave}
+              onChange={(e) => handleChange('palabrasClave', e.target.value)}
+              required
+            />
+            <span className="form-help">Ingrese palabras clave separadas por comas</span>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="contenido">
+              Contenido <span className="required">*</span>
+            </label>
+            <textarea
+              id="contenido"
+              className="form-control"
+              placeholder="Contenido completo de la normativa. Use # para títulos principales y ## para subtítulos."
+              value={formData.contenido}
+              onChange={(e) => handleChange('contenido', e.target.value)}
+              required
+              rows={8}
+            ></textarea>
+            <span className="form-help">Formato: Use # para títulos principales y ## para subtítulos</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Documento PDF */}
+      <div className="form-section">
+        <h3 className="form-section-title">Documento PDF</h3>
+        <div className="form-grid">
+          <div className="form-group full-width">
+            <label htmlFor="pdf-file">PDF firmado</label>
+            {!selectedFile ? (
+              <div
+                className="file-upload"
+                id="fileUploadZone"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => document.getElementById('pdf-file')?.click()}
+              >
+                <div className="file-upload-icon">📁</div>
+                <div className="file-upload-text">Haz clic para seleccionar o arrastra el archivo aquí</div>
+                <div className="file-upload-hint">
+                  Sube el PDF oficial firmado. Se almacenará en Supabase Storage y se mostrará en la vista pública
+                </div>
+              </div>
+            ) : (
+              <div className="file-selected">
+                <div className="file-selected-icon">📄</div>
+                <div className="file-selected-info">
+                  <div className="file-selected-name">{selectedFile.name}</div>
+                  <div className="file-selected-size">{selectedFile.size}</div>
+                </div>
+                <button type="button" className="file-remove" onClick={() => removeFile()}>
+                  ✕ Eliminar
+                </button>
+              </div>
             )}
+            <input
+              type="file"
+              id="pdf-file"
+              accept=".pdf"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+            />
           </div>
+        </div>
+      </div>
 
-          {regulation && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado Actual
-              </label>
-              <Badge>{regulation.state}</Badge>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}  style={{background: "linear-gradient(135deg, #0000FF 0%, #6366F1 100%)", color: "#FFFFFF", border: "none" }}>
-              {regulation ? 'Guardar Cambios' : 'Crear Normativa'}
-            </Button>
-            <Button type="button" variant="outline" onClick={onCancel} className="flex-1" disabled={isSubmitting}>
-              Cancelar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Actions */}
+      <div className="form-actions">
+        <button type="button" className="btn btn-secondary" onClick={onCancel}>
+          Cancelar
+        </button>
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+          ✓ {regulation ? 'Guardar Cambios' : 'Crear Normativa'}
+        </button>
+      </div>
     </form>
   );
 }

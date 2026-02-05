@@ -5,9 +5,7 @@ import { Regulation, RegulationType, WorkflowState } from '@/types';
 import { downloadRegulationPDF } from '@/lib/pdfGenerator';
 import FilterBar from '@/components/FilterBar';
 import RegulationsTable from '@/components/RegulationsTable';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Plus, FileText, CheckCircle, Clock, Archive } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { normalizeRegulations } from '@/lib/utils';
 
@@ -61,121 +59,95 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              Panel de Administración
-            </h1>
-            <p className="text-gray-600">
-              Gestiona decretos, resoluciones y ordenanzas
-            </p>
-          </div>
-          <div className="flex flex-col md:flex-row gap-2">
-            {/* <Link href="/admin/editor">
-              <Button size="lg" variant="secondary">
-                <FileText className="h-5 w-5 mr-2" />
-                Editor de Boletín
-              </Button>
-            </Link> */}
-            <Link href="/admin/regulations/new">
-              <Button size="lg"  style={{
-                background: "rgba(255, 255, 255, 0.1)",  // Fondo blanco semi-transparente
-                color: "#6366F1",
-                border: "2px solid #6366F1",
-                backdropFilter: "blur(10px)"
-              }}>
-                <Plus className="h-5 w-5 mr-2" />
-                Nueva Normativa
-              </Button>
-            </Link>
-          </div>
-        </div>
+    <div className="page-container">
+      <div className="page-header">
+        <h2>Panel de Administración</h2>
+        <p>Gestiona decretos, resoluciones y ordenanzas</p>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              Normativas totales
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Publicadas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.published}</div>
-            <p className="text-xs text-muted-foreground">
-              Disponibles públicamente
-            </p>
-          </CardContent>
-        </Card>
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-header">
+            <div>
+              <div className="stat-title">Total</div>
+            </div>
+            <div className="stat-icon">📊</div>
+          </div>
+          <div className="stat-value">{stats.total}</div>
+          <div className="stat-description">Normativas totales</div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En Revisión</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.inReview}</div>
-            <p className="text-xs text-muted-foreground">
-              Pendientes de aprobación
-            </p>
-          </CardContent>
-        </Card>
+        <div className="stat-card success">
+          <div className="stat-header">
+            <div>
+              <div className="stat-title">Publicadas</div>
+            </div>
+            <div className="stat-icon">✓</div>
+          </div>
+          <div className="stat-value">{stats.published}</div>
+          <div className="stat-description">Disponibles públicamente</div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Borradores</CardTitle>
-            <Archive className="h-4 w-4 text-gray-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.drafts}</div>
-            <p className="text-xs text-muted-foreground">
-              En edición
-            </p>
-          </CardContent>
-        </Card>
+        <div className="stat-card warning">
+          <div className="stat-header">
+            <div>
+              <div className="stat-title">En Revisión</div>
+            </div>
+            <div className="stat-icon">⏱️</div>
+          </div>
+          <div className="stat-value">{stats.inReview}</div>
+          <div className="stat-description">Pendientes de aprobación</div>
+        </div>
+
+        <div className="stat-card info">
+          <div className="stat-header">
+            <div>
+              <div className="stat-title">Borradores</div>
+            </div>
+            <div className="stat-icon">📝</div>
+          </div>
+          <div className="stat-value">{stats.drafts}</div>
+          <div className="stat-description">En edición</div>
+        </div>
       </div>
 
-      <Card className="mb-6 shadow-xl border border-gray-100 bg-white/95 backdrop-blur-sm rounded-2xl">
-        <CardHeader>
-          <CardTitle>Búsqueda y Filtros</CardTitle>
-          <CardDescription className="text-gray-600">
-            Filtra las normativas por tipo, estado, fecha o palabras clave
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-gray-700">
-          <FilterBar onFilterChange={setFilters} showStateFilter={true} />
-        </CardContent>
-      </Card>
+      {/* Search Section */}
+      <div className="search-section">
+        <div className="search-header">
+          <h3>Búsqueda y Filtros</h3>
+        </div>
+        <div className="search-controls">
+          <div className="search-input-wrapper">
+            <span className="search-icon">🔍</span>
+            <input 
+              type="text" 
+              className="search-input" 
+              placeholder="Buscar por referencia, contenido o palabras clave..."
+            />
+          </div>
+          <Link href="/admin/regulations/new">
+            <button className="btn btn-primary">
+              ➕ Nueva Normativa
+            </button>
+          </Link>
+        </div>
+      </div>
 
-      <Card className="shadow-xl border border-gray-100 bg-white/95 backdrop-blur-sm rounded-2xl">
-        <CardHeader>
-          <CardTitle>Todas las Normativas</CardTitle>
-          <CardDescription className="text-gray-600">
-            {regulations.length} normativa(s) encontrada(s)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-gray-700">
-          <RegulationsTable
-            regulations={regulations}
-            showState={true}
-            onDownloadPDF={handleDownloadPDF}
-          />
-        </CardContent>
-      </Card>
+      {/* Results Section */}
+      <div className="results-section">
+        <div className="results-header">
+          <h3 className="results-title">Todas las Normativas</h3>
+          <div className="results-count">
+            <strong>{regulations.length}</strong> normativa(s) encontrada(s)
+          </div>
+        </div>
+        <RegulationsTable
+          regulations={regulations}
+          showState={true}
+          onDownloadPDF={handleDownloadPDF}
+        />
+      </div>
     </div>
   );
 }

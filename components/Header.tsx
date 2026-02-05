@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, Settings, Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { FileText, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Header() {
@@ -12,74 +11,35 @@ export default function Header() {
   const isAdminRoute = pathname?.startsWith('/admin');
 
   return (
-    <header
-      className="border-b sticky top-0 z-50 shadow-sm"
-       style={{ background: 'linear-gradient(135deg, #0000FF 0%, #4169E1 100%)', color: '#FFFFFF' }}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <FileText className="h-8 w-8" style={{ color: '#FFFFFF' }} />
-            <div className="hidden md:block">
-              <h1 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>
-                Portal de Decretos, Resoluciones y Ordenanzas
-              </h1>
-              <p className="text-sm" style={{ color: '#E6E6FF' }}>Sistema de Gestión Normativa</p>
-            </div>
-            <div className="md:hidden">
-              <h1 className="text-lg font-bold" style={{ color: '#FFFFFF' }}>PDRO</h1>
-            </div>
+    <header className="site-header sticky top-0 z-50">
+      <div className="header-content">
+        <div className="flex items-center space-x-4">
+          <FileText className="h-8 w-8 header-icon" />
+          <div className="hidden md:block">
+            <h1 className="text-xl font-bold">Portal de Decretos, Resoluciones y Ordenanzas</h1>
+            <p className="text-sm text-white/90">Sistema de Gestión Normativa</p>
           </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-4">
-            <Link href="/">
-              <Button
-                variant={!isAdminRoute ? 'default' : 'ghost'}
-                style={{ background: 'transparent', color: '#FFFFFF', border: '2px solid #FFFFFF' }}
-              >
-                Portal Público
-              </Button>
-            </Link>
-            <Link href="/admin">
-              <Button
-                variant={isAdminRoute ? 'default' : 'ghost'}
-                style={{ background: 'transparent', color: '#FFFFFF', border: '2px solid #FFFFFF' }}
-              >
-                <Settings className="h-4 w-4 mr-2" style={{ color: '#FFFFFF' }} />
-                Administración
-              </Button>
-            </Link>
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{ color: '#FFFFFF' }}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" style={{ color: '#FFFFFF' }} />
-            ) : (
-              <Menu className="h-6 w-6" style={{ color: '#FFFFFF' }} />
-            )}
-          </button>
+          <div className="md:hidden">
+            <h1 className="text-lg font-bold">PDRO</h1>
+          </div>
         </div>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center space-x-4 header-buttons">
+          <Link href="/" className="btn-header">📄 Portal Público</Link>
+          <Link href="/admin" className="btn-header">⚙️ Administración</Link>
+        </nav>
+
+        {/* Mobile Menu Button */}
+        <button className="md:hidden text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <nav className="md:hidden py-4 space-y-2">
-            <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant={!isAdminRoute ? 'default' : 'ghost'} className="w-full">
-                Portal Público
-              </Button>
-            </Link>
-            <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant={isAdminRoute ? 'default' : 'ghost'} className="w-full">
-                <Settings className="h-4 w-4 mr-2" />
-                Administración
-              </Button>
-            </Link>
+          <nav className="md:hidden py-4 space-y-2 w-full">
+            <Link href="/" className="btn-header w-full" onClick={() => setMobileMenuOpen(false)}>Portal Público</Link>
+            <Link href="/admin" className="btn-header w-full" onClick={() => setMobileMenuOpen(false)}>⚙️ Administración</Link>
           </nav>
         )}
       </div>

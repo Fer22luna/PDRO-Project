@@ -1,16 +1,6 @@
 'use client';
 
 import { Regulation, RegulationType } from '@/types';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Eye, Download, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -41,52 +31,20 @@ export default function RegulationsTable({
     }
   };
 
-  const getTypeBadgeVariant = (type: RegulationType) => {
+  const getTypeBadgeClass = (type: RegulationType) => {
     switch (type) {
       case 'DECREE':
-        return 'default' as const;
+        return 'badge-decreto';
       case 'RESOLUTION':
-        return 'secondary' as const;
+        return 'badge-resolucion';
       case 'ORDINANCE':
-        return 'outline' as const;
+        return 'badge-resolucion';
       case 'TRIBUNAL_RESOLUTION':
-        return 'secondary' as const;
+        return 'badge-resolucion';
       case 'BID':
-        return 'default' as const;
-    }
-  };
-
-  const getStateBadgeVariant = (state: string) => {
-    switch (state) {
-      case 'PUBLISHED':
-        return 'default' as const;
-      case 'APPROVED':
-        return 'secondary' as const;
-      case 'REVIEW':
-        return 'outline' as const;
-      case 'DRAFT':
-        return 'outline' as const;
-      case 'ARCHIVED':
-        return 'destructive' as const;
+        return 'badge-licitacion';
       default:
-        return 'outline' as const;
-    }
-  };
-
-  const getStateLabel = (state: string) => {
-    switch (state) {
-      case 'DRAFT':
-        return 'Borrador';
-      case 'REVIEW':
-        return 'En Revisión';
-      case 'APPROVED':
-        return 'Aprobado';
-      case 'PUBLISHED':
-        return 'Publicado';
-      case 'ARCHIVED':
-        return 'Archivado';
-      default:
-        return state;
+        return 'badge-decreto';
     }
   };
 
@@ -103,19 +61,6 @@ export default function RegulationsTable({
     }
   };
 
-  const getLegalStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'VIGENTE':
-        return 'default' as const;
-      case 'PARCIAL':
-        return 'secondary' as const;
-      case 'SIN_ESTADO':
-        return 'outline' as const;
-      default:
-        return 'outline' as const;
-    }
-  };
-
   if (regulations.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -127,169 +72,73 @@ export default function RegulationsTable({
   const getPdfUrl = (regulation: Regulation) => regulation.fileUrl || regulation.pdfUrl;
 
   return (
-    <>
-      {/* Desktop Table */}
-      <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-100 shadow-lg bg-white/95">
-        <div className="max-h-96 overflow-y-auto">
-          <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-gray-700">Fecha Publicación</TableHead>
-              <TableHead className="text-gray-700">Número Especial</TableHead>
-              <TableHead className="text-gray-700">Referencia</TableHead>
-              <TableHead className="text-gray-700">Estado Legal</TableHead>
-              <TableHead className="text-gray-700">Tipo</TableHead>
-              {showState && <TableHead className="text-gray-700">Estado</TableHead>}
-              <TableHead className="text-right text-gray-700">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {regulations.map((regulation) => (
-              <TableRow key={regulation.id}>
-                <TableCell>
-                  {format(regulation.publicationDate, 'dd/MM/yyyy')}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {regulation.specialNumber}
-                </TableCell>
-                <TableCell>{regulation.reference}</TableCell>
-                <TableCell>
-                  <Badge variant={getLegalStatusBadgeVariant(regulation.legalStatus ?? 'SIN_ESTADO')}>
-                    {getLegalStatusLabel(regulation.legalStatus ?? 'SIN_ESTADO')}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getTypeBadgeVariant(regulation.type)}>
-                    {getTypeLabel(regulation.type)}
-                  </Badge>
-                </TableCell>
-                {showState && (
-                  <TableCell>
-                    <Badge variant={getStateBadgeVariant(regulation.state)}>
-                      {getStateLabel(regulation.state)}
-                    </Badge>
-                  </TableCell>
-                )}
-                <TableCell className="text-right">
-                  <div className="flex justify-end items-center gap-2 whitespace-nowrap">
-                    {getPdfUrl(regulation) ? (
-                      <a
-                        href={getPdfUrl(regulation) as string}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Button size="sm" variant="outline">
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver PDF
-                        </Button>
-                      </a>
-                    ) : (
-                      <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`}>
-                        <Button size="sm" variant="outline">
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver
-                        </Button>
-                      </Link>
-                    )}
-                    {showState && (
-                      <Link href={`/admin/regulations/${regulation.id}`}>
-                        <Button size="sm" variant="outline">
-                          <Edit className="h-4 w-4 mr-1" />
-                          Editar
-                        </Button>
-                      </Link>
-                    )}
-                    {onDownloadPDF && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onDownloadPDF(regulation)}
-                      >
-                        <Download className="h-4 w-4 mr-1" />
-                        PDF
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-          </Table>
-        </div>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-4">
-        {regulations.map((regulation) => (
-          <div
-            key={regulation.id}
-            className="rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden"
-          >
-            <div className="bg-gradient-to-r from-blue-50 to-white px-4 py-2 flex items-center justify-between">
-              <Badge variant={getTypeBadgeVariant(regulation.type)}>
-                {getTypeLabel(regulation.type)}
-              </Badge>
-              <p className="text-xs text-gray-600">{format(regulation.publicationDate, 'dd/MM/yyyy')}</p>
-            </div>
-
-            <div className="p-4 space-y-2">
-              <h3 className="font-semibold text-lg">{regulation.specialNumber}</h3>
-              <p className="text-sm text-gray-700">{regulation.reference}</p>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant={getLegalStatusBadgeVariant(regulation.legalStatus ?? 'SIN_ESTADO')}>
-                  {getLegalStatusLabel(regulation.legalStatus ?? 'SIN_ESTADO')}
-                </Badge>
-                {showState && (
-                  <Badge variant={getStateBadgeVariant(regulation.state)}>
-                    {getStateLabel(regulation.state)}
-                  </Badge>
-                )}
-              </div>
-              <div className="text-xs text-gray-500">Expediente / Ref: {regulation.reference}</div>
-
-              <div className="flex space-x-2 pt-2">
-                {getPdfUrl(regulation) ? (
-                  <a
-                    href={getPdfUrl(regulation) as string}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1"
-                  >
-                    <Button size="sm" variant="outline" className="w-full">
-                      <Eye className="h-4 w-4 mr-1" />
-                      Ver PDF
-                    </Button>
-                  </a>
-                ) : (
-                  <Link href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`} className="flex-1">
-                    <Button size="sm" variant="outline" className="w-full">
-                      <Eye className="h-4 w-4 mr-1" />
-                      Ver
-                    </Button>
-                  </Link>
-                )}
-                {showState && (
-                  <Link href={`/admin/regulations/${regulation.id}`} className="flex-1">
-                    <Button size="sm" variant="outline" className="w-full">
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
-                  </Link>
-                )}
-                {onDownloadPDF && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onDownloadPDF(regulation)}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
+    <div className="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Número Especial</th>
+            <th>Referencia</th>
+            <th>Tipo</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {regulations.map((regulation) => (
+            <tr key={regulation.id}>
+              <td>{format(regulation.publicationDate, 'dd/MM/yyyy')}</td>
+              <td>
+                <span className="doc-number">{regulation.specialNumber}</span>
+              </td>
+              <td>
+                <span className="doc-reference">{regulation.reference}</span>
+              </td>
+              <td>
+                <span className={`badge ${getTypeBadgeClass(regulation.type)}`}>
+                  {getTypeLabel(regulation.type)}
+                </span>
+              </td>
+              <td>
+                <div className="action-buttons">
+                  {getPdfUrl(regulation) ? (
+                    <a
+                      href={getPdfUrl(regulation) as string}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-action btn-action-primary"
+                    >
+                      👁️ Ver PDF
+                    </a>
+                  ) : (
+                    <Link
+                      href={`/${showState ? 'admin/' : ''}regulations/${regulation.id}`}
+                      className="btn-action btn-action-primary"
+                    >
+                      👁️ Ver
+                    </Link>
+                  )}
+                  {onDownloadPDF && (
+                    <button
+                      onClick={() => onDownloadPDF(regulation)}
+                      className="btn-action"
+                    >
+                      ⬇️ Descargar
+                    </button>
+                  )}
+                  {showState && (
+                    <Link
+                      href={`/admin/regulations/${regulation.id}`}
+                      className="btn-action btn-action-edit"
+                    >
+                      ✏️ Editar
+                    </Link>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
