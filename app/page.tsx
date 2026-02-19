@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Regulation, RegulationType } from '@/types';
-import { getRegulations } from '@/lib/mockData';
 import { downloadRegulationPDF } from '@/lib/pdfGenerator';
 import RegulationsTable from '@/components/RegulationsTable';
 import { Input } from '@/components/ui/input';
@@ -78,15 +77,9 @@ export default function Home() {
 
         setRegulations(filtered);
       } catch (err) {
-        // fallback: use local mock data
-        const allRegulations = getRegulations({
-          ...filters,
-          state: 'PUBLISHED',
-          searchText: [filters.searchText, filters.expediente].filter(Boolean).join(' ').trim() || undefined,
-          dateFrom: dateFrom ? new Date(dateFrom) : undefined,
-          dateTo: dateTo ? new Date(dateTo) : undefined,
-        });
-        setRegulations(allRegulations);
+        // API error — no fallback mock data in production; show empty list and log the error
+        console.error('Failed to load regulations from API:', err);
+        setRegulations([]);
       }
     };
 
